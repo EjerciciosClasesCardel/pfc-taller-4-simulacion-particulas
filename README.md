@@ -35,7 +35,10 @@ app/src/main/scala/common/
 app/src/test/scala/taller/
     SimulacionParticulasTest.scala las 36 pruebas dadas, que no se modifican
 
-docs/                              los informes, en Markdown
+docs/
+    proceso.md                     informe de proceso
+    correccion.md                  informe de corrección
+    paralelizacion.md              informe de paralelización
 ```
 
 Su código va en `SimulacionParticulas.scala`. Las 36 pruebas que vienen
@@ -48,10 +51,11 @@ van donde le resulte más cómodo: al final de
 nuevo dentro de `app/src/test/scala/taller/`. Las dos formas valen; lo que no
 se toca es lo que ya estaba escrito.
 
-Los informes de proceso y de corrección que pide el enunciado van en `docs/`,
-en Markdown, con la notación matemática en LaTeX y los diagramas en
-`mermaid`; no se aceptan imágenes insertadas ni archivos por fuera de esa
-carpeta.
+Los tres informes que pide el enunciado, de proceso, de corrección y de
+paralelización, van en `docs/`, en Markdown, con la notación matemática en
+LaTeX y los diagramas en `mermaid`; no se aceptan imágenes insertadas ni
+archivos por fuera de esa carpeta. Los tres archivos vienen con un ejemplo
+resuelto sobre funciones distintas a las de este taller.
 
 ## Cómo se ejecuta
 

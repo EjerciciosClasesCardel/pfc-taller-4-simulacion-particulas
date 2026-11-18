@@ -207,4 +207,120 @@ class SimulacionParticulasTest extends AnyFunSuite {
     val candidatos = List(16, 128, 1024)
     assert(candidatos.contains(umbralConveniente(grande, 0.5, candidatos)))
   }
+
+  // Punto 2
+
+  def particula(x: Double, y: Double, vx: Double, vy: Double, m: Double): Particula =
+    Particula(Vector2(x, y), Vector2(vx, vy), m)
+
+  test("energiaSecuencial: velocidad (6, 8) de norma 10 y masa 3 da 150") {
+    assert(cerca(energiaSecuencial(Array(particula(0, 0, 6, 8, 3.0))), 150.0))
+  }
+
+  test("energiaSecuencial: suma las energías de partículas distintas") {
+    val sistema: Sistema = Array(particula(0, 0, 1, 0, 4.0), particula(5, 5, 0, 2, 2.0))
+    assert(cerca(energiaSecuencial(sistema), 6.0))
+  }
+
+  test("energiaSecuencial: no depende de la posición") {
+    val enElOrigen = energiaSecuencial(Array(particula(0, 0, 5, 12, 2.0)))
+    val lejos = energiaSecuencial(Array(particula(100, -50, 5, 12, 2.0)))
+    assert(cerca(enElOrigen, 169.0) && cerca(lejos, 169.0))
+  }
+
+  test("energiaSecuencial: el orden de las partículas no cambia el resultado") {
+    val a = particula(1, 1, 3, 4, 2.0)
+    val b = particula(2, 0, -1, 2, 5.0)
+    val c = particula(0, 7, 0, -6, 1.5)
+    assert(cerca(energiaSecuencial(Array(a, b, c)), energiaSecuencial(Array(c, b, a))))
+  }
+
+  test("masaTotal: suma masas decimales") {
+    val sistema: Sistema = Array(
+      particula(0, 0, 0, 0, 0.5), particula(1, 1, 0, 0, 1.5), particula(2, 2, 0, 0, 2.25)
+    )
+    assert(cerca(masaTotal(sistema), 4.25))
+  }
+
+  test("masaTotal: con una sola partícula es su masa") {
+    assert(cerca(masaTotal(Array(particula(3, 4, 5, 6, 7.5))), 7.5))
+  }
+
+  test("centroDeMasaSecuencial: con una sola partícula es su posición") {
+    assert(cerca(centroDeMasaSecuencial(Array(particula(3, -2, 1, 1, 5.0))), Vector2(3.0, -2.0)))
+  }
+
+  test("centroDeMasaSecuencial: tres partículas en el plano con masas distintas") {
+    val sistema: Sistema = Array(
+      particula(0, 0, 0, 0, 1.0), particula(4, 0, 0, 0, 1.0), particula(0, 4, 0, 0, 2.0)
+    )
+    assert(cerca(centroDeMasaSecuencial(sistema), Vector2(1.0, 2.0)))
+  }
+
+  test("centroDeMasaSecuencial: una partícula sin masa no mueve el centro") {
+    val sistema: Sistema = Array(
+      particula(0, 0, 0, 0, 2.0), particula(100, 100, 0, 0, 0.0), particula(4, 0, 0, 0, 2.0)
+    )
+    assert(cerca(centroDeMasaSecuencial(sistema), Vector2(2.0, 0.0)))
+  }
+
+  test("centroDeMasaSecuencial: con posiciones negativas") {
+    val sistema: Sistema = Array(particula(-2, -2, 0, 0, 1.0), particula(2, 2, 0, 0, 3.0))
+    assert(cerca(centroDeMasaSecuencial(sistema), Vector2(1.0, 1.0)))
+  }
+
+  test("centroDeMasaSecuencial: un sistema no vacío de masa cero tiene el centro en el origen") {
+    assert(centroDeMasaSecuencial(Array(particula(5, 5, 1, 1, 0.0))) == Vector2(0.0, 0.0))
+  }
+
+  // Punto 4
+
+  test("trabajo: sistema vacío y una partícula") {
+    assert(trabajo(0) == 0 && trabajo(1) == 1)
+  }
+
+  test("trabajo: un millón de partículas son un millón de operaciones") {
+    assert(trabajo(1000000) == 1000000)
+  }
+
+  test("profundidad: ocho partículas con umbral 1 son tres particiones y un elemento") {
+    assert(profundidad(8, 1) == 4)
+  }
+
+  test("profundidad: dos particiones y un tramo de 256") {
+    assert(profundidad(1024, 256) == 258)
+  }
+
+  test("profundidad: tamaño impar, 5 con umbral 2") {
+    assert(profundidad(5, 2) == 4)
+  }
+
+  test("profundidad: la mitad menor puede ser la que domina, 11 con umbral 5") {
+    assert(profundidad(11, 5) == 6)
+  }
+
+  test("profundidad: un umbral cero se comporta como uno") {
+    assert(profundidad(8, 0) == profundidad(8, 1))
+  }
+
+  test("tiempoEstimado: 1024 partículas, 8 procesadores y umbral 128") {
+    assert(cerca(tiempoEstimado(1024, 8, 128), 259.0))
+  }
+
+  test("tiempoEstimado: con tantos procesadores como partículas queda la profundidad más uno") {
+    assert(cerca(tiempoEstimado(1024, 1024, 1), 12.0))
+  }
+
+  test("tiempoEstimado: más procesadores lo reducen") {
+    assert(tiempoEstimado(4096, 2, 64) > tiempoEstimado(4096, 8, 64))
+  }
+
+  test("tiempoEstimado: nunca baja de la profundidad ni del trabajo entre procesadores") {
+    val casos = List(10, 100, 1000).flatMap(n =>
+      List(1, 4, 16).flatMap(p => List(1, 10, 100).map(u => (n, p, u))))
+    assert(casos.forall { case (n, p, u) =>
+      tiempoEstimado(n, p, u) >= profundidad(n, u) &&
+        tiempoEstimado(n, p, u) >= trabajo(n).toDouble / p
+    })
+  }
 }

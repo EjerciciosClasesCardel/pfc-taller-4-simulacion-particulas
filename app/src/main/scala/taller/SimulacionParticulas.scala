@@ -2,6 +2,8 @@ package taller
 
 import common._
 
+import scala.annotation.tailrec
+
 /**
  * Taller 4 — simulación de partículas repartida entre varios núcleos.
  *
@@ -34,16 +36,46 @@ class SimulacionParticulas {
   // Punto 2: magnitudes globales ----------------------------------------------
 
   /** La suma de las energías cinéticas, media masa por velocidad al cuadrado. */
-  def energiaSecuencial(s: Sistema): Double = ???
+    // Ejemplo: energiaSecuencial(sistema) == 128.5          // 25 + 2 + 1.5 + 100
+  def energiaSecuencial(s: Sistema): Double = {
+    @tailrec
+    def aux(i: Int, acc: Double): Double =
+      if (i >= s.length) acc
+      else {
+        val v = s(i).vel.norma
+        aux(i + 1, acc + 0.5 * s(i).masa * v * v)
+      }
+    aux(0, 0.0)
+  }
 
   /** La suma de las masas. */
-  def masaTotal(s: Sistema): Double = ???
+    // Ejemplo: masaTotal(sistema) == 8.0
+  def masaTotal(s: Sistema): Double = {
+    @tailrec
+    def aux(i: Int, acc: Double): Double =
+      if (i >= s.length) acc
+      else aux(i + 1, acc + s(i).masa)
+
+    aux(0, 0.0)
+  }
 
   /**
    * La suma de las posiciones ponderadas por la masa, dividida entre la masa
    * total. Sin masa, el origen.
    */
-  def centroDeMasaSecuencial(s: Sistema): Vector2 = ???
+
+    // Ejemplo: centroDeMasaSecuencial(sistema) == Vector2(1.0, 2.75)          // (8, 22) / 8
+  def centroDeMasaSecuencial(s: Sistema): Vector2 = {
+    @tailrec
+    def aux(i: Int, suma: Vector2, masa: Double): (Vector2, Double) = {
+      if (i >= s.length) (suma, masa)
+      else aux(i + 1, suma + s(i).pos * s(i).masa, masa + s(i).masa)
+    }
+
+    val (suma, masa) = aux(0, Vector2(0.0, 0.0), 0.0)
+    if (masa == 0.0) Vector2(0.0, 0.0)
+    else Vector2(suma.x / masa, suma.y / masa)
+  }
 
   // Punto 3: las mismas magnitudes en paralelo --------------------------------
 
@@ -59,13 +91,29 @@ class SimulacionParticulas {
   // Punto 4: trabajo y profundidad --------------------------------------------
 
   /** El número total de operaciones, una por partícula. */
-  def trabajo(n: Int): Int = ???
+    // Ejemplo: trabajo(10) == 10
+  def trabajo(n: Int): Int = n
 
   /** Cuántas veces se parte a la mitad, más el tramo que queda sin partir. */
-  def profundidad(n: Int, umbral: Int): Int = ???
+    // Ejemplo: profundidad(10, 3) == 5            // 10 -> 5 -> (2 y 3): 2 particiones + tramo de 3
+  def profundidad(n: Int, umbral: Int): Int = {
+    val tope = math.max(umbral, 1)
+
+    @tailrec
+    def aux(tamanos: List[Int], nivel: Int, mejor: Int): Int =
+      if (tamanos.isEmpty) mejor
+      else {
+        val (hojas, partibles) = tamanos.partition(_ <= tope)
+        val nuevoMejor = (mejor :: hojas.map(nivel + _)).max
+        aux(partibles.flatMap(k => List(k / 2, k - k / 2)).distinct, nivel + 1, nuevoMejor)
+      }
+
+    aux(List(n), 0, 0)
+  }
 
   /** La profundidad más el trabajo entre p procesadores. */
-  def tiempoEstimado(n: Int, p: Int, umbral: Int): Double = ???
+    // Ejemplo: tiempoEstimado(10, 2, 3) == 10.0      // 5 + 10 / 2
+  def tiempoEstimado(n: Int, p: Int, umbral: Int): Double = profundidad(n, umbral) + trabajo(n).toDouble / p
 
   // Punto 5: medir la aceleración ---------------------------------------------
 

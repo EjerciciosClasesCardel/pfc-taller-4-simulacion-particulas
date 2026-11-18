@@ -51,9 +51,13 @@ pruebas del taller comparan con una tolerancia, como pide el enunciado.
 
 Para un sistema $s$ de $n$ partículas, con la suma vacía igual a $0$:
 
-$$E(s) = \sum_{j=0}^{n-1} \tfrac{1}{2}\, m_j \,\lVert v_j \rVert^2 \qquad\qquad M(s) = \sum_{j=0}^{n-1} m_j$$
+```math
+E(s) = \sum_{j=0}^{n-1} \tfrac{1}{2}\, m_j \,\lVert v_j \rVert^2 \qquad\qquad M(s) = \sum_{j=0}^{n-1} m_j
+```
 
-$$C(s) = \begin{cases} \dfrac{1}{M(s)} \displaystyle\sum_{j=0}^{n-1} m_j\, r_j & \text{si } M(s) \neq 0 \\[2ex] (0,\,0) & \text{si } M(s) = 0 \end{cases}$$
+```math
+C(s) = \begin{cases} \dfrac{1}{M(s)} \displaystyle\sum_{j=0}^{n-1} m_j\, r_j & \text{si } M(s) \neq 0 \\[2ex] (0,\,0) & \text{si } M(s) = 0 \end{cases}
+```
 
 Sean $P_E$, $P_M$ y $P_C$ los programas `energiaSecuencial`, `masaTotal` y
 `centroDeMasaSecuencial`:
@@ -105,7 +109,7 @@ patrón (Lema 1) y se verifica que cada función es una instancia suya.
 
 Sea $V$ igual a $\mathbb{R}$, a $\mathbb{R}^2$ o a $\mathbb{R}^2 \times
 \mathbb{R}$, con la suma componente a componente
-y el neutro $0_V$. Sea $g : \{0, \ldots, n-1\} \to V$. Sea $A_g$ el programa
+y el neutro $0_V$. Sea $`g : \{0, \ldots, n-1\} \to V`$. Sea $A_g$ el programa
 
 ```Scala
 def aux(i: Int, acc: V): V =
@@ -120,8 +124,7 @@ Entonces $A_g(0, 0_V) = \displaystyle\sum_{j=0}^{n-1} g(j)$.
 * Estado: $s = (i, acc)$.
 * Estado inicial: $s_0 = (0, 0_V)$.
 * Estado final: $(i, acc)$ con $i \geq n$. La respuesta es $acc$.
-* Invariante: $\text{Inv}(i, acc) \equiv 0 \leq i \leq n \;\land\; acc =
-\displaystyle\sum_{j=0}^{i-1} g(j)$.
+* Invariante: $`\text{Inv}(i, acc) \equiv 0 \leq i \leq n \;\land\; acc = \displaystyle\sum_{j=0}^{i-1} g(j)`$.
 * Transformación: $\text{transformar}(i, acc) = (i + 1, \ acc + g(i))$.
 
 **1. $\text{Inv}(s_0)$.** $0 \leq 0 \leq n$ y $acc = 0_V$, que es la suma vacía.
@@ -149,7 +152,7 @@ Ambas son instancias del Lema 1 con $V = \mathbb{R}$:
 
 | Función | $g(j)$ | Línea del programa |
 |---------|--------|--------------------|
-| `energiaSecuencial` | $\tfrac{1}{2}\, m_j \,\lVert v_j \rVert^2$ | `acc + 0.5 * s(i).masa * v * v`, con `v = s(i).vel.norma` |
+| `energiaSecuencial` | $`\tfrac{1}{2}\, m_j \,\lVert v_j \rVert^2`$ | `acc + 0.5 * s(i).masa * v * v`, con `v = s(i).vel.norma` |
 | `masaTotal` | $m_j$ | `acc + s(i).masa` |
 
 Por el Lema 1, $P_E(s) = \sum_j \tfrac{1}{2} m_j \lVert v_j \rVert^2 = E(s)$ y $P_M(s) = \sum_j m_j = M(s)$. $\blacksquare$
@@ -158,16 +161,17 @@ Por el Lema 1, $P_E(s) = \sum_j \tfrac{1}{2} m_j \lVert v_j \rVert^2 = E(s)$ y $
 
 La función interna lleva dos acumuladores a la vez, así que es una instancia
 del Lema 1 con
-$V = \mathbb{R}^2 \times \mathbb{R}$ y $g(j) = (m_j\, r_j,\ m_j)$: la primera
+$V = \mathbb{R}^2 \times \mathbb{R}$ y $`g(j) = (m_j\, r_j,\ m_j)`$: la primera
 componente es `suma + s(i).pos * s(i).masa` y la segunda es `masa + s(i).masa`. Por el Lema 1:
 
-$$\text{aux}(0, (0,0), 0.0) = \Big(\sum_{j=0}^{n-1} m_j\, r_j,\ \
-\sum_{j=0}^{n-1} m_j\Big) = \big(S,\ M(s)\big)$$
+```math
+\text{aux}(0, (0,0), 0.0) = \Big(\sum_{j=0}^{n-1} m_j\, r_j,\ \ \sum_{j=0}^{n-1} m_j\Big) = \big(S,\ M(s)\big)
+```
 
 Después de `aux` el programa divide una sola vez, fuera del ciclo. Hay dos casos:
 
 * **$M(s) = 0$.** La condición `masa == 0.0` se cumple y el programa devuelve $(0, 0) = C(s)$.
-* **$M(s) \neq 0$.** El programa devuelve $(S_x / M(s),\ S_y / M(s)) = \frac{1}{M(s)}\, S = C(s)$.
+* **$M(s) \neq 0$.** El programa devuelve $`(S_x / M(s),\ S_y / M(s)) = \frac{1}{M(s)}\, S = C(s)`$.
 
 Por lo tanto $P_C(s) = C(s)$. $\blacksquare$
 
@@ -219,8 +223,7 @@ $$
 \end{aligned}
 $$
 
-que coincide con $C(\text{sistema}) = \frac{1}{8}\,(0\cdot 2 + 4\cdot 1 +
-0\cdot 3 + 2\cdot 2,\ 0 + 0 + 6\cdot 3 + 2\cdot 2) = \frac{1}{8}(8, 22)$.
+que coincide con $`C(\text{sistema}) = \frac{1}{8}\,(0\cdot 2 + 4\cdot 1 + 0\cdot 3 + 2\cdot 2,\ 0 + 0 + 6\cdot 3 + 2\cdot 2) = \frac{1}{8}(8, 22)`$.
 
 ### Conclusión del punto 2
 
@@ -242,9 +245,11 @@ Sea $\tau = \max(\mu, 1)$ el tope del umbral $\mu$. Un tramo de tamaño $k > \ta
 $\lfloor k/2 \rfloor$ y otro de tamaño $k - \lfloor k/2 \rfloor$ (la división entera del punto medio
 `m = desde + (hasta - desde) / 2`), y un tramo de tamaño $k \leq \tau$ se resuelve en secuencial. Las especificaciones son:
 
-$$W(n) = n \qquad\qquad D_\tau(k) = \begin{cases} k & \text{si } k \leq \tau
+```math
+W(n) = n \qquad\qquad D_\tau(k) = \begin{cases} k & \text{si } k \leq \tau
 \\[1ex] 1 + \max\big(D_\tau(\lfloor k/2 \rfloor),\ D_\tau(k - \lfloor k/2
-\rfloor)\big) & \text{si } k > \tau \end{cases}$$
+\rfloor)\big) & \text{si } k > \tau \end{cases}
+```
 
 $$\widehat{T}(n, p, \mu) = D_\tau(n) + \frac{W(n)}{p} \qquad (p \geq 1)$$
 
@@ -293,13 +298,15 @@ $k$ en el nivel $0$. Un nodo de tamaño
 $k > \tau$ tiene dos hijos, de tamaños $\lfloor k/2 \rfloor$ y $k - \lfloor k/2 \rfloor$,
 en el nivel siguiente. Un nodo de tamaño $k \leq \tau$ es una hoja, que se resuelve en secuencial.
 
-**Lema 2.** La suma de los tamaños de las hojas del árbol de raíz $k$, contadas con repetición, es $k$.
+### Lema 2: la suma de los tamaños de las hojas es k
+
+La suma de los tamaños de las hojas del árbol de raíz $k$, contadas con repetición, es $k$.
 
 **Demostración**, por inducción fuerte sobre $k$.
 
-*Caso base $k \leq \tau$.* El árbol es una sola hoja de tamaño $k$.
+**Caso base $k \leq \tau$.** El árbol es una sola hoja de tamaño $k$.
 
-*Caso de inducción $k > \tau$.* Entonces $k \geq 2$. Sean $a = \lfloor k/2
+**Caso de inducción $k > \tau$.** Entonces $k \geq 2$. Sean $a = \lfloor k/2
 \rfloor$ y $b = k - a$, ambos menores que $k$, de
 modo que la hipótesis de inducción (HI) vale para ellos. Las hojas del árbol
 de $k$ son las hojas del árbol de $a$ junto
@@ -315,13 +322,15 @@ ni sube por repartirlo.
 Sea $H_\ell(k)$ el conjunto de tamaños de las hojas del nivel $\ell$ del
 árbol de particiones de raíz $k$. Entonces:
 
-$$D_\tau(k) = \max\big\{\, \ell + h \;\big|\; \ell \geq 0,\ h \in H_\ell(k)
-\,\big\}$$
+```math
+D_\tau(k) = \max\big\{\, \ell + h \;\big|\; \ell \geq 0,\ h \in H_\ell(k)
+\,\big\}
+```
 
 **Demostración**, por inducción fuerte sobre $k$.
 
 **Caso base $k \leq \tau$.** El árbol es una sola hoja en el nivel $0$, así
-que $H_0(k) = \{k\}$ y el máximo es $0 + k = k = D_\tau(k)$.
+que $`H_0(k) = \{k\}`$ y el máximo es $0 + k = k = D_\tau(k)$.
 
 **Caso de inducción $k > \tau$.** Sean $a = \lfloor k/2 \rfloor$ y $b = k - a$,
 ambos menores que $k$, de modo que la hipótesis de inducción (HI) vale para ellos.
@@ -329,9 +338,11 @@ Una hoja del nivel $\ell \geq 1$ del árbol de $k$ es una hoja del nivel $\ell -
 árbol de $a$ o del de $b$, y el árbol de $k$ no tiene hojas en el nivel $0$.
 Entonces:
 
-$$\max_{\ell,\, h} (\ell + h) = 1 + \max\Big(\max_{\ell',\, h \in H_{\ell'}
+```math
+\max_{\ell,\, h} (\ell + h) = 1 + \max\Big(\max_{\ell',\, h \in H_{\ell'}
 (a)} (\ell' + h),\ \max_{\ell',\, h \in H_{\ell'}(b)} (\ell' + h)\Big)
-\overset{\text{HI}}{=} 1 + \max\big(D_\tau(a),\ D_\tau(b)\big) = D_\tau(k)$$
+\overset{\text{HI}}{=} 1 + \max\big(D_\tau(a),\ D_\tau(b)\big) = D_\tau(k)
+```
 
 Por inducción fuerte, el lema vale para todo $k$. $\blacksquare$
 
@@ -342,33 +353,32 @@ Por inducción fuerte, el lema vale para todo $k$. $\blacksquare$
 **Demostración.** Sea $L_\ell$ el conjunto de tamaños de los nodos del nivel
 $\ell$ del árbol de $n$:
 
-$$L_0 = \{n\} \qquad L_{\ell + 1} = \big\{\, \lfloor k/2 \rfloor,\ k -
-\lfloor k/2 \rfloor \;\big|\; k \in L_\ell,\ k > \tau \,\big\}$$
+```math
+L_0 = \{n\} \qquad L_{\ell + 1} = \big\{\, \lfloor k/2 \rfloor,\ k -
+\lfloor k/2 \rfloor \;\big|\; k \in L_\ell,\ k > \tau \,\big\}
+```
 
-Las hojas del nivel $\ell$ son $H_\ell = \{k \in L_\ell \mid k \leq \tau\}$.
+Las hojas del nivel $\ell$ son $`H_\ell = \{k \in L_\ell \mid k \leq \tau\}`$.
 Se formaliza la iteración de `aux`:
 
 * Estado: $s = (T, \ell, m)$, que corresponde a `(tamanos, nivel, mejor)`.
-* Estado inicial: $s_0 = (\{n\}, 0, 0)$, que es `aux(List(n), 0, 0)`.
+* Estado inicial: $`s_0 = (\{n\}, 0, 0)`$, que es `aux(List(n), 0, 0)`.
 * Estado final: $T = \varnothing$. La respuesta es $m$.
-* Invariante: $\text{Inv}(T, \ell, m) \equiv T = L_\ell \;\land\; m =
-\max\Big(\{0\} \cup \{\, j + k \mid j < \ell,\ k \in H_j \,\}\Big)$.
-* Transformación: con `hojas` $= \{k \in T \mid k \leq \tau\}$ y `partibles` $= T \setminus$ `hojas`,
-  $\text{transformar}(T, \ell, m) = (T', \ell + 1, m')$, donde $m' = \max\big(\{m\} \cup \{\ell + k \mid k \in \text{hojas}\}\big)$
+* Invariante: $`\text{Inv}(T, \ell, m) \equiv T = L_\ell \;\land\; m = \max\Big(\{0\} \cup \{\, j + k \mid j < \ell,\ k \in H_j \,\}\Big)`$.
+* Transformación: con `hojas` $`= \{k \in T \mid k \leq \tau\}`$ y `partibles` $= T \setminus$ `hojas`,
+  $\text{transformar}(T, \ell, m) = (T', \ell + 1, m')$, donde $`m' = \max\big(\{m\} \cup \{\ell + k \mid k \in \text{hojas}\}\big)`$
   y $T'$ son los tamaños $\lfloor k/2 \rfloor$ y $k - \lfloor k/2 \rfloor$ de cada $k \in$ `partibles`, sin repetidos.
 
-**1. $\text{Inv}(s_0)$.** $T = \{n\} = L_0$, y $m = 0 = \max(\{0\} \cup
-\varnothing)$, porque para $\ell = 0$ no hay niveles $j < 0$.
+**1. $\text{Inv}(s_0)$.** $`T = \{n\} = L_0`$, y $`m = 0 = \max(\{0\} \cup \varnothing)`$, porque para $\ell = 0$ no hay niveles $j < 0$.
 
 **2. La invariante se conserva.** Sea $(T, \ell, m)$ con $T \neq \varnothing$
 y $\text{Inv}$. Como $T = L_\ell$, se tiene
-`hojas` $= H_\ell$ y `partibles` $= \{k \in L_\ell \mid k > \tau\}$.
+`hojas` $= H_\ell$ y `partibles` $`= \{k \in L_\ell \mid k > \tau\}`$.
 Entonces:
 
 * $T' = L_{\ell + 1}$ por la definición de $L_{\ell+1}$.
 * Quitar repetidos (`distinct`) no cambia el conjunto de tamaños.
-* $m' = \max\big(\{0\} \cup \{j + k \mid j < \ell,\ k \in H_j\} \cup \{\ell + k \mid k \in H_\ell\}\big) = \max\big(\{0\} \cup \{j + k \mid j < \ell + 1,\
-k \in H_j\}\big)$.
+* $`m' = \max\big(\{0\} \cup \{j + k \mid j < \ell,\ k \in H_j\} \cup \{\ell + k \mid k \in H_\ell\}\big) = \max\big(\{0\} \cup \{j + k \mid j < \ell + 1,\ k \in H_j\}\big)`$.
 
 Por lo tanto $\text{Inv}(T', \ell + 1, m')$.
 
@@ -377,7 +387,9 @@ $L_\ell = \varnothing$. Como $L_{j+1}$ solo depende
 de $L_j$, también $L_j = \varnothing$ y $H_j = \varnothing$ para todo $j \geq
 \ell$. Luego
 
-$$m = \max\Big(\{0\} \cup \{\, j + k \mid j \geq 0,\ k \in H_j \,\}\Big)$$
+```math
+m = \max\Big(\{0\} \cup \{\, j + k \mid j \geq 0,\ k \in H_j \,\}\Big)
+```
 
 El conjunto de las hojas no es vacío (el árbol es finito y tiene al menos
 una) y todos sus costos $j + k$ son $\geq 0$,
@@ -403,8 +415,10 @@ menor, y el programa la encuentra porque toma el máximo sobre todas las hojas.
 
 **Demostración.**
 
-$$P_T(n, p, \mu) \rightarrow P_D(n, \mu) + P_W(n).\text{toDouble} / p \;=\;
-D_\tau(n) + \frac{n}{p} = \widehat{T}(n, p, \mu)$$
+```math
+P_T(n, p, \mu) \rightarrow P_D(n, \mu) + P_W(n).\text{toDouble} / p \;=\;
+D_\tau(n) + \frac{n}{p} = \widehat{T}(n, p, \mu)
+```
 
 La penúltima igualdad usa el Teorema 1 y $P_W(n) = n$. La conversión
 `toDouble` se hace antes de dividir: con una división entera el resultado
@@ -471,11 +485,11 @@ $$
 \text{aux}(\text{List}(10), 0, 0) \rightarrow \text{aux}(\text{List}(5), 1, 0) \rightarrow \text{aux}(\text{List}(2, 3), 2, 0) \rightarrow \text{aux}(\text{List}(), 3, 5) \rightarrow 5
 $$
 
-| Estado $(T, \ell, m)$ | $L_\ell$ | $H_\ell$ | $m = \max(\{0\} \cup \{j + k \mid j < \ell,\ k \in H_j\})$ |
+| Estado $(T, \ell, m)$ | $L_\ell$ | $H_\ell$ | $`m = \max(\{0\} \cup \{j + k \mid j < \ell,\ k \in H_j\})`$ |
 |-----------------------|----------|----------|------------------------------------------------------------|
-| $(\{10\}, 0, 0)$ | $\{10\}$ | $\varnothing$ | $0$ |
-| $(\{5\}, 1, 0)$ | $\{5\}$ | $\varnothing$ | $0$ |
-| $(\{2, 3\}, 2, 0)$ | $\{2, 3\}$ | $\{2, 3\}$ | $0$ |
+| $`(\{10\}, 0, 0)`$ | $`\{10\}`$ | $\varnothing$ | $0$ |
+| $`(\{5\}, 1, 0)`$ | $`\{5\}`$ | $\varnothing$ | $0$ |
+| $`(\{2, 3\}, 2, 0)`$ | $`\{2, 3\}`$ | $`\{2, 3\}`$ | $0$ |
 | $(\varnothing, 3, 5)$ | $\varnothing$ | $\varnothing$ | $\max(0, 2 + 2, 2 + 3) = 5$ |
 
 El resultado $5$ coincide con $D_3(10)$. Con ese valor:

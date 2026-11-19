@@ -461,3 +461,159 @@ profundidad es solo `987`, y el trabajo entre 8 procesadores es `125000`; la est
 `trabajo` devuelve `n`. `profundidad` es una recursión de cola que recorre el árbol de particiones nivel por nivel
 y se queda con la hoja más costosa, de costo `nivel + tamaño`, que es el máximo de $D(\text{parallel}(e_1, e_2))$.
 `tiempoEstimado` suma esa profundidad con el trabajo repartido entre `p` procesadores, usando división decimal.
+
+## Punto 5. Medir la aceleración
+
+Las dos funciones de este punto no recorren el sistema: trabaja con tiempos, que son números. `aceleración` compara dos tiempos y `umbralConveniente` compara los tiempos de varios umbrales y se queda con el menor. Los tiempos se toman con `medir`, que viene escrita con el taller, y la tabla completa la produce `App.Scala`.
+
+## 5.1 `aceleracion`
+
+### Definición del algoritmo 
+
+```Scala
+ def aceleracion(tSecuencial: Double, tParalelo: Double): Double =
+    tSecuencial / tParalelo
+```
+* Recibe el tiempo de la versión secuencial y el de la paralela, los dos en milisegundos, y devuelve cuántas veces más rápida fue la paralela.
+* Un resultado mayor que uno quiere decir que repartir ganó tiempo: igual a 1. que tardaron lo mismo; menor que 1, que tardaron lo mismo; menor que 1. que repartir costó más de lo que ahorró.
+* No es recursiva: hace una sola división de `Double` entre `Double`, así que no pierde decimales.
+
+### Seguimiento de la ejecución
+Ejemplo principal: `aceleracion(90.0, 36.0)`.
+
+| Paso | Operación | Resultado |
+|---|---|---|
+| 1 | `90.0 / 36.0` | 2.5 |
+
+Resultado: `2.5`. El paralelo fue dos veces y media más rápido.
+
+Otros dos casos, para ver los tres significados:
+
+| Llamado | Cálculo | Resultado | Lectura |
+|----|----|----|----|
+| `aceleracion(48.0, 48.0)` | `48.0 / 48.0` | 1.0 | tardaron lo mismo |
+| `aceleracion(10.0, 16.0)` | `10.0 / 16.0` | 0.625 | tel paralelo fue más lento |
+
+### Estado de la pila de llamados
+
+La función no llama a otras: la pila tiene un solo elemento.
+
+| Paso | Pila (de abajo hacia arriba) | Qué ocurre|
+|---|---|---|
+| 1 | `aceleración` | calcula `90.0 / 36.0`y devuvle 2.5 |
+
+### Diagrama de llamados 
+
+```mermaid
+sequenceDiagram
+    participant Main as aceleracion(90.0, 36.0)
+   
+    Main->>Main: 90.0 / 36.0
+    Main-->>Main: return 2.5
+```
+El diagrama representa el cálculo dentro de la única llamada a `aceleracion`; no es una llamada recursiva.
+
+## 5.2 `umbralConveniente`
+
+### Definición del algoritmo
+
+```Scala
+ def umbralConveniente(s: Sistema, dt: Double, umbrales: List[Int]): Int = {
+    // Recorre los candidatos que faltan y recuerda el mejor umbral y su tiempo.
+    @tailrec
+    def aux(restantes: List[Int], mejorUmbral: Int, mejorTiempo: Double): Int =
+      restantes match {
+        case Nil => mejorUmbral
+        case cabeza :: cola =>
+          val tiempo = medir(5)(pasoParalelo(s, dt , cabeza))
+          if (tiempo < mejorTiempo) aux(cola, cabeza, tiempo)
+          else aux(cola, mejorUmbral, mejorTiempo)
+      }
+    umbrales match {
+      case Nil => s.length
+      case cabeza :: cola => aux(cola, cabeza, medir(5)(pasoParalelo(s, dt, cabeza)))
+    }
+
+  }
+}
+```
+
+* Si la lista de candidatos está vacía, devuelve `s.length`: un umbral igual al tamaño del sistema no parte nada, que equivale a no repartir.
+* Si no está vacía, mode el primer candidato y lo deja como el mejor por ahora. `aux` recorre los candidatos que faltan.
+* Cada candidato se mide **una sola vez** con `medir(5)`, que toma la mediana de cinco corridas. Su tiempo se compara con `mejorTiempo`, que ya está guardado y no se vuelve a medir.
+* Si el candidato tarda estrictamente menos, pasa a ser el mejor. Si empate, se queda el que ya estaba, es decir, el primero de la lista.
+* `aux` es una recursión de cola `@tailrec`: la llamada recursiva es lo último que hacen así que la pila no crece.
+
+### Explicación paso a paso
+
+#### Caso base
+
+`rescates` es `Nil`: ya se midieron todos lo candidatos y `mejorUmbral` es el que menos tardó.
+### Caso recursivo
+
+`restantes` es `cabeza :: cola`, Se mide `cabeza` y se compara su tiempo con `mejor +Tiempo`. En los dos casos se llama a `aux` con `cola` que tiene un candidato menos.
+
+### Seguimiento de la ejecución
+
+Los tiempos reales de la máquina; para ver cómo avanza `aux` se suponen estos tiempos medidos: el umbral 8 tarda 9.0 ms, el 4 tarda 6.5 ms y el 2 tarda 7.0 ms. Se evalúa `umbralConveniente(s, dt, List(0, 4, 21).
+
+| Paso| `Restante`| `mejorUmnbral` | `mwjorTiempo`| Operación |
+|----|----|----|----|----|
+| 0 | `List(4, 2)` | 8| 9.0| Estado inicial, despúes de medir el umbral 8 |
+| 1| `List(4, 2)`| 8| 9.0 | Mider 4: `6.5 < 9.0`, actualizar el mejor |
+| 2 | `List(2)` | 4 | 6.5 | Mide 2: `7.0 < 6.5` es falso, conserva el mejor | 
+| 3 | `Nil` | 4 | 6.5 | Caso base: devuelve 4 |
+
+Resultados: `4`
+
+Con la lista vacía: `umbralConveiente(s, dt, Nil)` devuelve `s.length`; si el sistema tiene 4 partículas, devuelve `4`.
+
+### Estado de la pila de llamados
+
+| Paso | Operación | Resultado |
+|---|---|---|
+| 0 | `umbralCOnveniente`| mide el candidato 8 y llama a `aux` |
+| 1 | `umbralCOnveniente`, `aux(List(4,2), 8, 9.0)` | mide 4: 6.5 < 9.0, llama a `aux` |
+| 1 | `umbralCOnveniente`, `aux(List(2), 4, 6.5)`  | mide 2: 7.0 < 9.0 no es menor, llama a `aux` |
+| 3 | `umbralCOnveniente`, `aux(Nil, 4, 6.5)` | caso base: devuelve 4|
+
+La tabla representa los estados sucesivos de `aux`, no noveles que se acumules en la pila. Como la llamada recursiva es lo último que hace cada caso y `@tailrec` lo comprueba, el comprueba, el compilador reemplaza cada llamada por la siguiente iteración: en cada paso hay una sola activación de `aux` con otros valores en sus parámetros. Por eso la pila no crece aunque la lista tenga mucho umbrales.
+
+### Diagrama de llamados de pila con recursión de cola
+
+```mermaid
+sequenceDiagram
+    participant Main as umbralConvenientes(s, List(8, 4, 2))
+    participant L1 as Aux(Lis(4, 2), 8, 9.0)
+    participant L2 as Aux(Lis(2), 4, 6.5)
+    participant L3 as aux(Nil, 4, 6.5)
+
+    Main->>L1: llamada inicial (mide 8: 9.0)
+    L1->>L2: tail call con (Lis(2), 4, 6.5)
+    L2->>L3: tail call con (Nil, 4, 6.5)
+    L3-->>Main: return 4
+```
+
+### Diagrama de flujo
+
+```mermaid
+flowchart TD
+    A["umbralConveniente(s, dt, umbrales)"] --> B{"¿umbrales vacía?"}
+    B -- SI --> C["devuelve s.length"]
+    B -- no --> D["mide el primer candidato"]
+    D --> E["aux(cola, primero, tiempo)"]
+    E --> F{"¿restantes vacía?"}
+    F -- sí --> G["devuelve mejorUmbral"]
+    F -- no --> H["mide el siguiente candidato (cabeza)"]
+    H --> I {"¿tiempo < mejorTiempo?"}
+    I -- si --> J["aux(cola, cabeza, tiempo)"]
+    I -- no --> K["aux(cola, mejorUmbral, mejorTiempo)"]
+    j --> F
+    k --> F
+```
+
+## 5.3 La medición en `App.scala`
+
+`App.scala` arma la tabla del informe de paralelización. Para cada tamaño de sistema hace estos pasos:
+1. Define los tamaños `500000`, `1000000` y `2000000`, el paso de tiempo `det = 0.01` y las repeticiones (`21`).
+2. Para cada tamaño prepara 

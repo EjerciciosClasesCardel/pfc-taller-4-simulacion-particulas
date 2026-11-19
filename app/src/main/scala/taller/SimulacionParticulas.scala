@@ -4,6 +4,7 @@ import common._
 
 import scala.annotation.tailrec
 
+
 /**
  * Taller 4 — simulación de partículas repartida entre varios núcleos.
  *
@@ -129,11 +130,28 @@ class SimulacionParticulas {
   }
 
   /** El cociente entre el tiempo secuencial y el paralelo. */
-  def aceleracion(tSecuencial: Double, tParalelo: Double): Double = ???
+  def aceleracion(tSecuencial: Double, tParalelo: Double): Double =
+    tSecuencial / tParalelo
 
   /**
    * El umbral que menos tarda de una lista de candidatos. Con la lista vacía,
    * el tamaño del sistema, que equivale a no repartir.
    */
-  def umbralConveniente(s: Sistema, dt: Double, umbrales: List[Int]): Int = ???
+  def umbralConveniente(s: Sistema, dt: Double, umbrales: List[Int]): Int = {
+    // Recorre los candidatos que faltan y recuerda el mejor umbral y su tiempo.
+    @tailrec
+    def aux(restantes: List[Int], mejorUmbral: Int, mejorTiempo: Double): Int =
+      restantes match {
+        case Nil => mejorUmbral
+        case cabeza :: cola =>
+          val tiempo = medir(5)(pasoParalelo(s, dt , cabeza))
+          if (tiempo < mejorTiempo) aux(cola, cabeza, tiempo)
+          else aux(cola, mejorUmbral, mejorTiempo)
+      }
+    umbrales match {
+      case Nil => s.length
+      case cabeza :: cola => aux(cola, cabeza, medir(5)(pasoParalelo(s, dt, cabeza)))
+    }
+
+  }
 }

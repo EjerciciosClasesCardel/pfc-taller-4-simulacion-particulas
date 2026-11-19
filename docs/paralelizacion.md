@@ -78,29 +78,33 @@ graph TD
 
 ## Cómo se tomaron los tiempos
 
-Cada cifra es la media de diez corridas. Antes de esas diez van cinco que no se
-cuentan, porque la máquina virtual compila y optimiza el código mientras el
-programa corre: las primeras corridas miden una versión del programa que ya no
-existe cuando llega la sexta. Al lado de cada media va la desviación de las
-diez, que dice cuánto se movió el reloj de una corrida a otra.
+Cada cifra sale de ScalaMeter, la librería con que mide el curso:
+`withWarmer(new Warmer.Default) measure { ... }` ejecuta el bloque hasta que la
+máquina virtual se estabiliza y solo entonces mide, porque las primeras
+corridas miden una versión del programa que el compilador interno todavía está
+optimizando. Cada tiempo es la mediana de cinco mediciones y al lado va la
+desviación de esas cinco, que dice cuánto se movió el reloj de una a otra.
 
 ```Scala
-def medir[A](repeticiones: Int, calentamiento: Int)(bloque: => A): (Double, Double) = {
-  def calentar(k: Int): Unit =
-    if (k <= 0) () else { bloque; calentar(k - 1) }
-  def medirUna(): Double = {
-    val t0 = System.nanoTime()
-    bloque
-    (System.nanoTime() - t0) / 1e6
+import org.scalameter._
+
+def medir[A](repeticiones: Int)(cuerpo: => A): Double = {
+  val muestras = Vector.fill(repeticiones) {
+    (withWarmer(new Warmer.Default) measure { cuerpo }).value
   }
-  def acumular(k: Int, ts: List[Double]): List[Double] =
-    if (k <= 0) ts else acumular(k - 1, medirUna() :: ts)
-  calentar(calentamiento)
-  val ts = acumular(repeticiones, Nil)
-  val media = ts.sum / ts.size
-  val varianza = ts.map(t => (t - media) * (t - media)).sum / ts.size
-  (media, math.sqrt(varianza))
+  muestras.sorted.apply(muestras.length / 2)
 }
+
+def desviacion(ts: List[Double]): Double = {
+  val media = ts.sum / ts.size
+  math.sqrt(ts.map(t => (t - media) * (t - media)).sum / ts.size)
+}
+```
+
+La dependencia ya viene en `app/build.gradle` del repositorio:
+
+```groovy
+implementation 'com.storm-enroute:scalameter-core_2.13:0.21'
 ```
 
 Las dos versiones recorren el arreglo con la misma función, así que la

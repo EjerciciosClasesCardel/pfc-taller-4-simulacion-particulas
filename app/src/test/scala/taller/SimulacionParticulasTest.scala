@@ -207,4 +207,70 @@ class SimulacionParticulasTest extends AnyFunSuite {
     val candidatos = List(16, 128, 1024)
     assert(candidatos.contains(umbralConveniente(grande, 0.5, candidatos)))
   }
+
+  // Aqui empiezan los test nuevos ----------------------------------------------
+
+  // Test adicional Punto 4 ---------------------------------------------------------------
+  test("trabajo: maneja correctamente sistemas vacíos y unitarios") {
+    assert(trabajo(0) == 0)
+    assert(trabajo(1) == 1)
+  }
+
+  test("profundidad: maneja correctamente tamaños mínimos") {
+    assert(profundidad(0, 1) == 0)
+    assert(profundidad(1, 1) == 1)
+    assert(profundidad(1, 10) == 1)
+  }
+
+  test("profundidad: divide correctamente segmentos de tamaño impar") {
+    assert(profundidad(5, 2) == 4)
+    assert(profundidad(9, 4) == 5)
+    assert(profundidad(1000, 1) == 11)
+  }
+
+  test("profundidad: no divide cuando el umbral supera el tamaño") {
+    assert(profundidad(5, 10) == 5)
+    assert(profundidad(100, 200) == 100)
+  }
+
+  test("tiempoEstimado: disminuye al aumentar los procesadores") {
+    val conUno = tiempoEstimado(1024, 1, 1)
+    val conCuatro = tiempoEstimado(1024, 4, 1)
+    val conOcho = tiempoEstimado(1024, 8, 1)
+
+    assert(cerca(conUno, 1035.0))
+    assert(cerca(conCuatro, 267.0))
+    assert(cerca(conOcho, 139.0))
+
+    assert(conUno > conCuatro)
+    assert(conCuatro > conOcho)
+  }
+
+  // Punto 5 -------------------------------------------------------------------
+
+  test("aceleracion: calcula correctamente el cociente de tiempos") {
+    assert(cerca(aceleracion(100.0, 25.0), 4.0))
+    assert(cerca(aceleracion(100.0, 100.0), 1.0))
+  }
+
+  test("aceleracion: identifica cuando la versión paralela es más lenta") {
+    assert(cerca(aceleracion(50.0, 100.0), 0.5))
+  }
+
+  test("umbralConveniente: devuelve el tamaño del sistema si no hay candidatos") {
+    assert(umbralConveniente(s, 1.0, Nil) == s.length)
+  }
+
+  test("umbralConveniente: devuelve el único umbral disponible") {
+    assert(umbralConveniente(s, 1.0, List(1)) == 1)
+  }
+
+  test("umbralConveniente: selecciona un umbral de la lista de candidatos") {
+    val candidatos = List(1, 2, 4, 8, 16)
+
+    val resultado = umbralConveniente(s, 1.0, candidatos)
+
+    assert(candidatos.contains(resultado))
+  }
+
 }

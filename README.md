@@ -16,8 +16,7 @@ la nota.
 
 | Nombre completo | Código |
 |---|---|
-| | |
-| | |
+| Santiago Vásquez Valencia | 202611028 |
 | | |
 | | |
 

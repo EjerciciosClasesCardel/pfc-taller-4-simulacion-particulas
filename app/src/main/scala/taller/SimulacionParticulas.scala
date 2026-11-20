@@ -60,13 +60,34 @@ class SimulacionParticulas {
   // Punto 4: trabajo y profundidad --------------------------------------------
 
   /** El número total de operaciones, una por partícula. */
-  def trabajo(n: Int): Int = ???
+  def trabajo(n: Int): Int = {
+    require(n >= 0, s"n debe ser positivo")
+    n
+  }
 
   /** Cuántas veces se parte a la mitad, más el tramo que queda sin partir. */
-  def profundidad(n: Int, umbral: Int): Int = ???
+  def profundidad(n: Int, umbral: Int): Int = {
+    require(n >= 0, "n debe ser positivo")
+    require(umbral >= 1, "umbral debe ser al menos 1")
+
+    def calculo(tamaño: Int): Int = {
+      if (tamaño <= umbral) {
+        tamaño
+      } else {
+        val mitad = tamaño / 2
+        val otraMitad = tamaño - mitad
+        1 + math.max(calculo(mitad), calculo(otraMitad))
+      }
+    }
+    calculo(n)
+  }
 
   /** La profundidad más el trabajo entre p procesadores. */
-  def tiempoEstimado(n: Int, p: Int, umbral: Int): Double = ???
+  def tiempoEstimado(n: Int, p: Int, umbral: Int): Double = {
+    require(p >= 1, "Debe existir al menos un procesador")
+
+    profundidad(n, umbral).toDouble + trabajo(n).toDouble / p
+  }
 
   // Punto 5: medir la aceleración ---------------------------------------------
 

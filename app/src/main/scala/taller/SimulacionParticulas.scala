@@ -21,19 +21,34 @@ class SimulacionParticulas {
   // Punto 1: un paso de la simulación -----------------------------------------
 
   /** La posición nueva es la anterior más la velocidad por dt. */
-  def mover(p: Particula, dt: Double): Particula = ???
+  def mover(p: Particula, dt: Double): Particula =
+    Particula(p.pos + p.vel * dt, p.vel, p.masa)
 
   /** Avanza todo el sistema un paso de tiempo dt. */
-  def pasoSecuencial(s: Sistema, dt: Double): Sistema = ???
+  def pasoSecuencial(s: Sistema, dt: Double): Sistema =
+    pasoSegmento(s, dt, 0, s.length)
 
   /** Avanza solo el tramo entre `desde` incluido y `hasta` excluido. */
-  def pasoSegmento(s: Sistema, dt: Double, desde: Int, hasta: Int): Sistema = ???
+  def pasoSegmento(s: Sistema, dt: Double, desde: Int, hasta: Int): Sistema =
+    Array.tabulate(hasta - desde)(i => mover(s(desde + i), dt))
 
   /**
    * Parte el sistema por la mitad con `parallel` mientras el tramo tenga más
    * elementos que el umbral, y por debajo de esa cifra resuelve en secuencial.
    */
-  def pasoParalelo(s: Sistema, dt: Double, umbral: Int): Sistema = ???
+  def pasoParalelo(s: Sistema, dt: Double, umbral: Int): Sistema = {
+    val tope = math.max(umbral, 1)
+    def aux(desde: Int, hasta: Int): Sistema =
+      if (hasta - desde <= tope){
+        pasoSegmento(s, dt, desde, hasta)
+      }
+      else {
+        val m = desde + (hasta - desde) / 2
+        val (izq, der) = parallel(aux(desde, m), aux(m, hasta))
+        izq ++ der
+      }
+    aux(0, s.length)
+  }
 
   // Punto 2: magnitudes globales ----------------------------------------------
 
@@ -82,13 +97,67 @@ class SimulacionParticulas {
   // Punto 3: las mismas magnitudes en paralelo --------------------------------
 
   /** La energía del sistema, repartida con el mismo umbral del punto 1. */
-  def energiaParalela(s: Sistema, umbral: Int): Double = ???
+  def energiaParalela(s: Sistema, umbral: Int): Double = {
+    val tope = math.max(umbral, 1)
+
+    @tailrec
+    def segmento(i: Int, hasta: Int, acc: Double): Double =
+      if (i >= hasta){
+        acc
+      }
+      else{
+        val v = s(i).vel.norma
+        segmento(i + 1, hasta, acc + 0.5 * s(i).masa * v * v)
+      }
+
+    def aux(desde: Int, hasta: Int): Double =
+      if (hasta - desde <= tope){
+        segmento(desde, hasta, 0.0)
+      }
+      else{
+        val m = desde + (hasta - desde) / 2
+        val (izq, der) = parallel(aux(desde, m), aux(m, hasta))
+        izq +  der
+      }
+    aux(0, s.length)
+  }
 
   /**
    * El centro de masa, repartido. Promediar los promedios de cada mitad da
    * otra cosa cuando las dos mitades no pesan igual.
    */
-  def centroDeMasaParalelo(s: Sistema, umbral: Int): Vector2 = ???
+  def centroDeMasaParalelo(s: Sistema, umbral: Int): Vector2 = {
+    val tope = math.max(umbral, 1)
+
+    @tailrec
+    def segmento(i: Int, hasta: Int, suma: Vector2, masa: Double): (Vector2, Double) =
+      if (i >= hasta ) {
+        (suma, masa)
+      }
+      else {
+        segmento(i + 1, hasta, suma + s(i).pos * s(i).masa, masa + s(i).masa )
+      }
+
+    def combinar(a: (Vector2, Double), b: (Vector2, Double)) : (Vector2, Double) =
+      (a._1 + b._1, a._2 + b._2)
+
+    def aux(desde: Int, hasta: Int): (Vector2, Double) =
+      if (hasta - desde <= tope){
+        segmento(desde, hasta, Vector2(0.0, 0.0), 0.0)
+      }
+      else{
+        val m = desde + (hasta - desde) / 2
+        val (izq, der) = parallel(aux(desde, m), aux(m, hasta))
+        combinar(izq, der)
+      }
+    val (suma, masa) = aux(0, s.length)
+    if (masa == 0.0){
+      Vector2(0.0, 0.0)
+    }
+    else{
+      Vector2(suma.x / masa, suma.y / masa)
+    }
+  }
 
   // Punto 4: trabajo y profundidad --------------------------------------------
 

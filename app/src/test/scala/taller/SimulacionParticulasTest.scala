@@ -85,6 +85,37 @@ class SimulacionParticulasTest extends AnyFunSuite {
     assert(pasoParalelo(Array(p), 1.0, 0).length == 1)
   }
 
+  // Nuevos test punto 1
+
+  val a = Particula(Vector2(4, 0), Vector2(-1,0), 2)
+  val b = Particula(Vector2(8, 0), Vector2(0, 0), 2)
+  val c = Particula(Vector2(0, 0), Vector2(3, 0), 2)
+
+  test("mover: La velocidad negativa disminuye la posición"){
+    assert(mover(a, 2.0).pos == Vector2(2, 0))
+  }
+
+  test("pasosSecuencial: Mueve dos partículas"){
+    val r = pasoSecuencial(Array(a,b), 2.0)
+    assert(r.map(_.pos.x).toList == List(2.0, 8.0))
+  }
+
+  test("pasoSegmento: Proceso solo el tramo indicado"){
+    val r = pasoSegmento(Array(a, b, c), 1.0, 1, 3)
+    assert(r.map(_.pos.x).toList == List(8.0, 3.0))
+  }
+
+  test("pasoParalelo: mueve tres partículas"){
+    val r = pasoParalelo(Array(a, b, c), 2.0, 1)
+    assert(r.map(_.pos.x).toList == List(2.0, 8.0, 6.0))
+  }
+
+  test("pasoParalelo: Con umbral mayor mueve correctamente"){
+    val r = pasoParalelo(Array(a, b, c), 1.0, 5)
+    assert(r.map(_.pos.x).toList == List(3.0, 8.0, 3.0))
+  }
+
+
   // Punto 2 -------------------------------------------------------------------
 
   test("energiaSecuencial: media masa por velocidad al cuadrado") {
@@ -158,6 +189,28 @@ class SimulacionParticulasTest extends AnyFunSuite {
 
   test("centroDeMasaParalelo: sin masa el centro es el origen") {
     assert(centroDeMasaParalelo(vacio, 1) == Vector2(0, 0))
+  }
+
+  // Nuevos test punto 3
+
+  test("energiaParalela: Suma la energía de dos partículas"){
+    assert(energiaParalela(Array(a, c), 1) == 10.0)
+  }
+
+  test("energiaParalela: Una particula quieta no aporta energía"){
+    assert(energiaParalela(Array(b), 1) == 0.0)
+  }
+
+  test("centroDeMasaParalelo: Dos masas iguales dan el punto medio"){
+    assert(centroDeMasaParalelo(Array(a, b), 1) == Vector2(6, 0))
+  }
+
+  test("centroDeMasaParalelo: Combina tres partículas"){
+    assert(centroDeMasaParalelo(Array(a, b, c), 1) == Vector2(4, 0))
+  }
+
+  test("centroDeMasaParalelo: Una particula conserva su posición"){
+    assert(centroDeMasaParalelo(Array(a), 1) == Vector2(4, 0))
   }
 
   // Punto 4 -------------------------------------------------------------------

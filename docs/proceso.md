@@ -259,7 +259,7 @@ println(sim.centroDeMasaSecuencial(Array())) // Vector2(0.0,0.0)
 ## Conclusión del punto 2
 
 Las tres funciones son recursiones de cola sobre el índice `i`, con un acumulador: un `Double` para la energía y la
-más, y una pareja `(Vector2, Double)` para el centro de masa. La pila se mantiene en una activación. El centro de
+masa, y una pareja `(Vector2, Double)` para el centro de masa. La pila se mantiene en una activación. El centro de
 masa lleva la suma ponderada y la masa en una sola pasada y divide una vez al final, con el origen como respuesta
 cuando no hay masa.
 
@@ -461,3 +461,203 @@ profundidad es solo `987`, y el trabajo entre 8 procesadores es `125000`; la est
 `trabajo` devuelve `n`. `profundidad` es una recursión de cola que recorre el árbol de particiones nivel por nivel
 y se queda con la hoja más costosa, de costo `nivel + tamaño`, que es el máximo de $D(\text{parallel}(e_1, e_2))$.
 `tiempoEstimado` suma esa profundidad con el trabajo repartido entre `p` procesadores, usando división decimal.
+
+# Punto 5. Medir la aceleración
+
+Las dos funciones de este punto no recorren el sistema: trabajan con tiempos, que son números. `aceleracion` compara dos tiempos y `umbralConveniente` compara los tiempos de varios umbrales y se queda con el menor. Los tiempos se toman con `medir`, que viene escrita en el taller, y la tabla completa la produce `App.scala`.
+
+## 5.1 `aceleracion`
+
+### Definición del algoritmo 
+
+```Scala
+ def aceleracion(tSecuencial: Double, tParalelo: Double): Double =
+    tSecuencial / tParalelo
+```
+* Recibe el tiempo de la versión secuencial y el de la paralela, los dos en milisegundos, y devuelve cuántas veces más rápida fue la paralela.
+* Un resultado mayor que 1 quiere decir que repartir ganó tiempo; igual a 1, que tardaron lo mismo; menor que 1, que repartir costó más de lo que ahorró.
+* No es recursiva: hace una sola división de `Double` entre `Double`, así que no pierde decimales.
+
+### Seguimiento de la ejecución
+Ejemplo principal: `aceleracion(90.0, 36.0)`.
+
+| Paso | Operación | Resultado |
+|---|---|---|
+| 1 | `90.0 / 36.0` | 2.5 |
+
+Resultado: `2.5`. El paralelo fue dos veces y media más rápido.
+
+Otros dos casos, para ver los tres significados:
+
+| Llamado | Cálculo | Resultado | Lectura |
+|----|----|----|----|
+| `aceleracion(48.0, 48.0)` | `48.0 / 48.0` | 1.0 | tardaron lo mismo |
+| `aceleracion(10.0, 16.0)` | `10.0 / 16.0` | 0.625 | el paralelo fue más lento |
+
+### Estado de la pila de llamados
+
+La función no llama a otras: la pila tiene un solo elemento.
+
+| Paso | Pila (de abajo hacia arriba) | Qué ocurre|
+|---|---|---|
+| 1 | `aceleracion` | calcula `90.0 / 36.0` y devuelve 2.5 |
+
+### Diagrama de llamados 
+
+```mermaid
+sequenceDiagram
+    participant Main as aceleracion(90.0, 36.0)
+   
+    Main->>Main: 90.0 / 36.0
+    Main-->>Main: return 2.5
+```
+El diagrama representa el cálculo dentro de la única llamada a `aceleracion`; no es una llamada recursiva.
+
+## 5.2 `umbralConveniente`
+
+### Definición del algoritmo
+
+```Scala
+ def umbralConveniente(s: Sistema, dt: Double, umbrales: List[Int]): Int = {
+    // Recorre los candidatos que faltan y recuerda el mejor umbral y su tiempo.
+    @tailrec
+    def aux(restantes: List[Int], mejorUmbral: Int, mejorTiempo: Double): Int =
+      restantes match {
+        case Nil => mejorUmbral
+        case cabeza :: cola =>
+          val tiempo = medir(5)(pasoParalelo(s, dt, cabeza))
+          if (tiempo < mejorTiempo) aux(cola, cabeza, tiempo)
+          else aux(cola, mejorUmbral, mejorTiempo)
+      }
+    umbrales match {
+      case Nil => s.length
+      case cabeza :: cola => aux(cola, cabeza, medir(5)(pasoParalelo(s, dt, cabeza)))
+    }
+
+  }
+```
+
+* Si la lista de candidatos está vacía, devuelve `s.length`: un umbral igual al tamaño del sistema no parte nada, que equivale a no repartir.
+* Si no está vacía, mide el primer candidato y lo deja como el mejor por ahora. `aux` recorre los candidatos que faltan.
+* Cada candidato se mide **una sola vez** con `medir(5)`: son cinco repeticiones, cada una con su calentamiento de `withWarmer(new Warmer.Default)`, y `medir` devuelve la mediana en milisegundos. Su tiempo se compara con `mejorTiempo`, que ya está guardado y no se vuelve a medir.
+* Si el candidato tarda estrictamente menos, pasa a ser el mejor. Si empatan, se queda el que ya estaba, es decir, el primero de la lista.
+* `aux` es una recursión de cola `@tailrec`: la llamada recursiva es lo último, así que la pila no crece.
+
+### Explicación paso a paso
+
+#### Caso base
+
+`restantes` es `Nil`: ya se midieron todos los candidatos y `mejorUmbral` es el que menos tardó.
+
+#### Caso recursivo
+
+`restantes` es `cabeza :: cola`, se mide `cabeza` y se compara su tiempo con `mejorTiempo`. En los dos casos se llama a `aux` con `cola`, que tiene un candidato menos.
+
+### Seguimiento de la ejecución
+
+Los tiempos reales dependen de la máquina; para ver cómo avanza `aux` se suponen estos tiempos medidos: el umbral 8 tarda 9.0 ms, el 4 tarda 6.5 ms y el 2 tarda 7.0 ms. Se evalúa `umbralConveniente(s, dt, List(8, 4, 2))`.
+
+| Paso| `restantes`| `mejorUmbral` | `mejorTiempo`| Operación |
+|----|----|----|----|----|
+| 0 | `List(4, 2)` | 8| 9.0| Estado inicial, después de medir el umbral 8 |
+| 1| `List(4, 2)`| 8| 9.0 | Mide 4: `6.5 < 9.0`, actualiza el mejor |
+| 2 | `List(2)` | 4 | 6.5 | Mide 2: `7.0 < 6.5` es falso, conserva el mejor | 
+| 3 | `Nil` | 4 | 6.5 | Caso base: devuelve 4 |
+
+Resultado: `4`
+
+Con la lista vacía: `umbralConveniente(s, dt, Nil)` devuelve `s.length`; si el sistema tiene 4 partículas, devuelve `4`.
+
+### Estado de la pila de llamados
+
+| Paso | Pila (de abajo hacia arriba)| Qué ocurre|
+|---|---|---|
+| 0 | `umbralConveniente`| mide el candidato 8 y llama a `aux` |
+| 1 | `umbralConveniente`, `aux(List(4,2), 8, 9.0)` | mide 4: 6.5 < 9.0, llama a `aux` |
+| 2 | `umbralConveniente`, `aux(List(2), 4, 6.5)`  | mide 2: 7.0 no es menor que 6.5 |
+| 3 | `umbralConveniente`, `aux(Nil, 4, 6.5)` | caso base: devuelve 4|
+
+La tabla representa los estados sucesivos de `aux`, no niveles que se acumulan en la pila. Como la llamada recursiva es lo último que hace cada caso y `@tailrec` lo comprueba, el compilador reemplaza cada llamada por la siguiente iteración: en cada paso hay una sola activación de `aux` con otros valores en sus parámetros. Por eso la pila no crece aunque la lista tenga muchos umbrales.
+
+### Diagrama de llamados de pila con recursión de cola
+
+```mermaid
+sequenceDiagram
+    participant Main as umbralConveniente(s, dt, List(8, 4, 2))
+    participant L1 as aux(List(4, 2), 8, 9.0)
+    participant L2 as aux(List(2), 4, 6.5)
+    participant L3 as aux(Nil, 4, 6.5)
+
+    Main->>L1: llamada inicial (mide 8: 9.0)
+    L1->>L2: tail call con (List(2), 4, 6.5)
+    L2->>L3: tail call con (Nil, 4, 6.5)
+    L3-->>Main: return 4
+```
+
+### Diagrama de flujo
+
+```mermaid
+flowchart TD
+    A["umbralConveniente(s, dt, umbrales)"] --> B{"¿umbrales vacía?"}
+    B -- sí --> C["devuelve s.length"]
+    B -- no --> D["mide el primer candidato"]
+    D --> E["aux(cola, primero, tiempo)"]
+    E --> F{"¿restantes vacía?"}
+    F -- sí --> G["devuelve mejorUmbral"]
+    F -- no --> H["mide el siguiente candidato (cabeza)"]
+    H --> I{"¿tiempo < mejorTiempo?"}
+    I -- sí --> J["aux(cola, cabeza, tiempo)"]
+    I -- no --> K["aux(cola, mejorUmbral, mejorTiempo)"]
+    J --> F
+    K --> F
+```
+
+## 5.3 La medición en `App.scala`
+
+`App.scala` arma la tabla del informe de paralelización. Para cada tamaño de sistema hace estos pasos:
+1. Define los tamaños `500000`, `1000000` y `2000000`, el paso de tiempo `dt = 0.01` y las repeticiones (`5`).
+2. `crear(n)` construye un sistema de `n` partículas con `Array.tabulate`, sin azar: el mismo `n` da siempre el mismo sistema.
+3. Para cada tamaño prepara los umbrales `n`, `n/2`, `n/8`, `n/64`, `n/512`.
+4. Mide `pasoSecuencial` con `medir(5)`: cada una de las cinco repeticiones calienta primero con ScalaMeter, sin tomar el tiempo, para que la máquina virtual optimice el código, y `medir` devuelve la mediana en milisegundos.
+5. Para cada umbral mide `pasoParalelo` con el mismo `medir(5)` (mismo calentamiento y misma mediana) y calcula la aceleración medida con `aceleracion`.
+6. Calcula también la aceleración estimada con el punto 4 y la fracción serial con la ley de Amdahl.
+7. Imprime una fila de la tabla por cada pareja (tamaño, umbral).
+
+El primer umbral de cada tamaño es el propio `n`: no reparte nada y es la **fila de control**, donde la aceleración debe dar cerca de 1.
+
+### Seguimiento con una fila
+
+Para `n = 1000000` y umbral `125000`, con tiempos supuestos de 24.0 ms el secuencial y 10.0 ms el paralelo, en una máquina de 8 núcleos. Estos valores son ilustrativos, no una medición real:
+
+| Paso | Cálculo| Resultado |
+|---|---|---|
+| 1 | `aceleracion(24.0, 10.0)` | 2.4|
+| 2 | `tiempoEstimado(1000000, 8, 125000)` | `125003 + 125000.0 = 250003.0`|
+| 3 | aceleración estimada = `trabajo(n) / tiempoEstimado` | `1000000 / 250003` ≈ 4.0|
+| 4 | `fraccionSerial(2.4, 8)` = `(1/2.4 - 1/8) / (1 - 1/8)` | 1/3 ≈ 0.33|
+
+La profundidad `125003` es 3 particiones más la hoja de `125000` partículas que cada tarea recorre sin repartir; por eso la estimación da cerca de 4 y no de 8. La aceleración medida (2.4) queda por debajo de la estimada (≈ 4.0) porque el modelo del punto 4 no cuenta costos reales como crear las tareas, coordinarlas y combinar resultados. La fracción serial sale de la ley de Amdahl a partir de la aceleración observada: es una estimación, no una medición directa del código secuencial.
+
+## Ejemplos de uso del punto 5
+
+```scala
+val sim = new SimulacionParticulas()
+
+println(sim.aceleracion(90.0, 36.0)) // 2.5
+println(sim.aceleracion(48.0, 48.0)) // 1.0
+println(sim.aceleracion(10.0, 16.0)) // 0.625
+println(sim.umbralConveniente(Array.empty[Particula], 0.5, Nil)) // 0
+```  
+
+El último ejemplo muestra el caso límite: sin partículas y sin candidatos, el tamaño del sistema es cero y eso es lo que devuelve.
+
+## Conclusión del punto 5
+
+`aceleracion` es el cociente entre el tiempo secuencial y paralelo: dice si repartir el trabajo ganó o perdió tiempo.
+
+`umbralConveniente` recorre los candidatos con una recursión de cola, mide cada uno una sola vez y conserva el de menor tiempo; con la lista vacía devuelve el tamaño del sistema.
+
+`App.scala` hace las mediciones con varios tamaños y umbrales y usa `aceleracion` para comparar los tiempos. Imprime una tabla con la aceleración medida, la estimada con el punto 4 y la fracción serial. La fila de control, donde el umbral es igual al tamaño del sistema, muestra que sin repartir el trabajo la aceleración queda cerca de 1.
+
+
+

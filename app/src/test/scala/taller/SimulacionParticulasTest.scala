@@ -322,5 +322,7 @@ class SimulacionParticulasTest extends AnyFunSuite {
       tiempoEstimado(n, p, u) >= profundidad(n, u) &&
         tiempoEstimado(n, p, u) >= trabajo(n).toDouble / p
     })
+
   }
+
 }

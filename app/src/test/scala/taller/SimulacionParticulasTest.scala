@@ -322,7 +322,51 @@ class SimulacionParticulasTest extends AnyFunSuite {
       tiempoEstimado(n, p, u) >= profundidad(n, u) &&
         tiempoEstimado(n, p, u) >= trabajo(n).toDouble / p
     })
+  }
+  // prueba 5
+   def  sistemaDe(n: Int): Sistema =
+     Array.tabulate(n) (i => Particula(
+       Vector2((i % 10).toDouble, (i / 10).toDouble),
+       Vector2((i % 7) - 3.0, (i % 5)- 2.0), 1.0 + (i % 3)))
+  // Parejas (tiempo secuencial, tiempo paralelo) distintas de las del enunciado.
+  val tiempos = List((90.0, 36.0), (10.0, 16.0), (48.0, 48.0), (7.5, 2.5), (0.3, 0.6),(1000.0, 8.0))
 
+  test("aceleración : devuelve el cociente exacto en caso distintos de los del enunciado"){
+    assert(cerca(aceleracion(1000.0, 8.0), 125.0))
+    assert(cerca(aceleracion(7.5, 2.5), 3.0))
+    assert(cerca(aceleracion(0.3, 0.6), 0.5))
+  }
+
+  test("aceleración: es mayor que 1 si el paralelo tardó menos, menor que 1 si tardó más, e igual a 1 si tardaron lo mismo"){
+    assert(tiempos.forall{ case (secuencial, paralelo) =>
+       val resultado = aceleracion(secuencial, paralelo)
+       (resultado > 1.0) == (secuencial > paralelo) &&
+         (resultado < 1.0) == (secuencial < paralelo) &&
+        cerca(resultado, 1.0) == (secuencial == paralelo)
+    })
+  }
+  test("umbralCOnveniente: sin candidatos devuelve el tamaño del sistema, vacío o no "){
+    val vacio: Sistema = Array.empty[Particula]
+    assert(umbralConveniente(vacio, 0.5, Nil) == 0)
+    assert(umbralConveniente(sistemaDe(37), 0.5, Nil) == 37)
+    assert(umbralConveniente(sistemaDe(1000), 0.5, Nil) == 1000)
+  }
+
+  test("umbralConveniente: con varios candidatos devuelve uno de ellos y no modifica el sistema"){
+    val sistema = sistemaDe(500)
+    val copiaAntes = sistema.toList
+    val candidatos = List(500, 125, 16, 2)
+
+    val escogido = umbralConveniente(sistema, 0.5, candidatos)
+
+    assert(candidatos.contains(escogido))
+    assert(sistema.toList == copiaAntes)
+  }
+  test("umbralConveniente: con un solo candidato, con repetido o con uno mayor que el sistema, devuelve ese valor"){
+    val sistema = sistemaDe(200)
+    assert(umbralConveniente(sistema, 0.5, List(7)) == 7)
+    assert(umbralConveniente(sistema, 0.5, List(5, 5, 5)) == 5)
+    assert(umbralConveniente(sistema, 0.5, List(100000)) == 100000)
   }
 
 }

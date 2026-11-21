@@ -259,7 +259,7 @@ println(sim.centroDeMasaSecuencial(Array())) // Vector2(0.0,0.0)
 ## Conclusión del punto 2
 
 Las tres funciones son recursiones de cola sobre el índice `i`, con un acumulador: un `Double` para la energía y la
-más, y una pareja `(Vector2, Double)` para el centro de masa. La pila se mantiene en una activación. El centro de
+masa, y una pareja `(Vector2, Double)` para el centro de masa. La pila se mantiene en una activación. El centro de
 masa lleva la suma ponderada y la masa en una sola pasada y divide una vez al final, con el origen como respuesta
 cuando no hay masa.
 
@@ -475,7 +475,7 @@ Las dos funciones de este punto no recorren el sistema: trabajan con tiempos, qu
     tSecuencial / tParalelo
 ```
 * Recibe el tiempo de la versión secuencial y el de la paralela, los dos en milisegundos, y devuelve cuántas veces más rápida fue la paralela.
-* Un resultado mayor que 1 quiere decir que repartir ganó tiempo: igual a 1, que tardaron lo mismo; menor que 1, que repartir costó más de lo que ahorró.
+* Un resultado mayor que 1 quiere decir que repartir ganó tiempo; igual a 1, que tardaron lo mismo; menor que 1, que repartir costó más de lo que ahorró.
 * No es recursiva: hace una sola división de `Double` entre `Double`, así que no pierde decimales.
 
 ### Seguimiento de la ejecución
@@ -539,7 +539,7 @@ El diagrama representa el cálculo dentro de la única llamada a `aceleracion`; 
 
 * Si la lista de candidatos está vacía, devuelve `s.length`: un umbral igual al tamaño del sistema no parte nada, que equivale a no repartir.
 * Si no está vacía, mide el primer candidato y lo deja como el mejor por ahora. `aux` recorre los candidatos que faltan.
-* Cada candidato se mide **una sola vez** con `medir(5)`: ScalaMeter calienta con `withWarmer(new Warmer.Default)`, mide cinco veces y `medir` devuelve la mediana en milisegundos. Su tiempo se compara con `mejorTiempo`, que ya está guardado y no se vuelve a medir.
+* Cada candidato se mide **una sola vez** con `medir(5)`: son cinco repeticiones, cada una con su calentamiento de `withWarmer(new Warmer.Default)`, y `medir` devuelve la mediana en milisegundos. Su tiempo se compara con `mejorTiempo`, que ya está guardado y no se vuelve a medir.
 * Si el candidato tarda estrictamente menos, pasa a ser el mejor. Si empatan, se queda el que ya estaba, es decir, el primero de la lista.
 * `aux` es una recursión de cola `@tailrec`: la llamada recursiva es lo último, así que la pila no crece.
 
@@ -618,11 +618,10 @@ flowchart TD
 1. Define los tamaños `500000`, `1000000` y `2000000`, el paso de tiempo `dt = 0.01` y las repeticiones (`5`).
 2. `crear(n)` construye un sistema de `n` partículas con `Array.tabulate`, sin azar: el mismo `n` da siempre el mismo sistema.
 3. Para cada tamaño prepara los umbrales `n`, `n/2`, `n/8`, `n/64`, `n/512`.
-4. `calentar` ejecuta diez veces `pasoSecuencial` y `pasoParalelo` con todos los umbrales, sin medir, para que la máquina virtual optimice el código. 
-5. Mide `pasoSecuencial` con `medir(5)`: la mediana de cinco mediciones de ScalaMeter, en milisegundos.
-6. Para cada umbral mide `pasoParalelo` con el mismo `medir(5)` y calcula la aceleración medida con `aceleracion`.
-7. Calcula también la aceleración estimada con el punto 4 y la fracción serial con la ley de Amdahl.
-8. Imprime una fila de la tabla por cada pareja (tamaño, umbral).
+4. Mide `pasoSecuencial` con `medir(5)`: cada una de las cinco repeticiones calienta primero con ScalaMeter, sin tomar el tiempo, para que la máquina virtual optimice el código, y `medir` devuelve la mediana en milisegundos.
+5. Para cada umbral mide `pasoParalelo` con el mismo `medir(5)` (mismo calentamiento y misma mediana) y calcula la aceleración medida con `aceleracion`.
+6. Calcula también la aceleración estimada con el punto 4 y la fracción serial con la ley de Amdahl.
+7. Imprime una fila de la tabla por cada pareja (tamaño, umbral).
 
 El primer umbral de cada tamaño es el propio `n`: no reparte nada y es la **fila de control**, donde la aceleración debe dar cerca de 1.
 
@@ -658,7 +657,7 @@ El último ejemplo muestra el caso límite: sin partículas y sin candidatos, el
 
 `umbralConveniente` recorre los candidatos con una recursión de cola, mide cada uno una sola vez y conserva el de menor tiempo; con la lista vacía devuelve el tamaño del sistema.
 
-`App.scala` hace las mediciones con varios tamaños y umbrales y usa `aceleracion` para comparar los tiempos. Imprime una tabla con la aceleración medida, la estimada con el punto 4 y la fracción serial. La fila de control, donde el umbral es igual al tamaño del sistema, comprueba que sin repartir el trabajo la aceleración queda cerca de 1.
+`App.scala` hace las mediciones con varios tamaños y umbrales y usa `aceleracion` para comparar los tiempos. Imprime una tabla con la aceleración medida, la estimada con el punto 4 y la fracción serial. La fila de control, donde el umbral es igual al tamaño del sistema, muestra que sin repartir el trabajo la aceleración queda cerca de 1.
 
 
 

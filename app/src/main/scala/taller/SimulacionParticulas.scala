@@ -142,7 +142,7 @@ class SimulacionParticulas {
       restantes match {
         case Nil => mejorUmbral
         case cabeza :: cola =>
-          val tiempo = medir(5)(pasoParalelo(s, dt , cabeza))
+          val tiempo = medir(5)(pasoParalelo(s, dt, cabeza))
           if (tiempo < mejorTiempo) aux(cola, cabeza, tiempo)
           else aux(cola, mejorUmbral, mejorTiempo)
       }

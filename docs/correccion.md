@@ -9,7 +9,7 @@ Scala que la implementa. Se demuestra que $P_f$ es correcto probando
 
 $$\forall a \in A : P_f(a) == f(a)$$
 
-Los programas de los puntos 2 y 4 recorren datos con una función interna
+Los programas de los puntos 2, 4 y 5 recorren datos con una función interna
 `aux` de recursión de cola, es decir, son programas iterativos. Para argumentar
 su corrección se formaliza la iteración con:
 
@@ -227,7 +227,7 @@ que coincide con $`C(\text{sistema}) = \frac{1}{8}\,(0\cdot 2 + 4\cdot 1 + 0\cdo
 
 ### Conclusión del punto 2
 
-Se demostró, con la invariante $acc = \sum_{j<i} g(j)$ del Lema 1, que
+Se demostró, con la invariante $acc = \sum_{j < i} g(j)$ del Lema 1, que
 `energiaSecuencial`, `masaTotal` y `centroDeMasaSecuencial` coinciden con $E$, $M$ y $C$ para todo sistema,
 incluido el vacío, y que las tres terminan tras $n$ pasos.
 
@@ -505,3 +505,140 @@ $D_\tau(n)$ gracias al Lema 3 y a la invariante sobre los niveles del árbol,
 y que `tiempoEstimado` devuelve
 $D_\tau(n) + n/p$. De ahí se siguen las cotas $\widehat{T} \geq D$ y
 $\widehat{T} \geq W/P$.
+
+## Punto 5. Medir la aceleración
+
+Los tiempos se miden en milisegundos con `medir(5)`. Que esos tiempos sean exactos no se puede demostrar, porque dependen de la máquina. Lo que se demuestra es que cada función **usa correctamente los tiempos que recibe o que midió**.
+
+La aceleración de un tiempo secuencial $a > 0$ frente a uno paralelo $b > 0$ es
+
+
+$$
+S(a,b) = \frac{a}{b}
+$$
+
+Sea $C = [\mu_1, \ldots, \mu_k]$ la lista de umbrales candidatos y $t_i$ el tiempo que `medir(5)` devuelve al medir `pasoParalelo` con el umbral $\mu_i$. Cada posición $i$ se mide una sola vez, así que un valor repetido en $C$ tiene un $t_i$ por cada aparición. Si $k \geq 1$, el resultado es el primer candidato de menor tiempo:
+
+$$U(s, dt, C) = \mu_j \quad\text{con}\quad j = \min\{\, i \mid t_i \leq t_l \text{ para todo } l \in \{1, \ldots, k\} \,\}$$
+
+Si $C$ está vacía, $U(s, dt, C) = n$, donde $n = \lvert s \rvert$: con ese umbral no se parte nada, que equivale a no repartir.
+
+Sean $P_S$ y $P_U$ los programas `aceleracion` y `umbralConveniente`:
+
+```Scala
+
+ def aceleracion(tSecuencial: Double, tParalelo: Double): Double =
+    tSecuencial / tParalelo
+
+ def umbralConveniente(s: Sistema, dt: Double, umbrales: List[Int]): Int = {
+    // Recorre los candidatos que faltan y recuerda el mejor umbral y su tiempo.
+    @tailrec
+    def aux(restantes: List[Int], mejorUmbral: Int, mejorTiempo: Double): Int =
+      restantes match {
+        case Nil => mejorUmbral
+        case cabeza :: cola =>
+          val tiempo = medir(5)(pasoParalelo(s, dt, cabeza))
+          if (tiempo < mejorTiempo) aux(cola, cabeza, tiempo)
+          else aux(cola, mejorUmbral, mejorTiempo)
+      }
+    umbrales match {
+      case Nil => s.length
+      case cabeza :: cola => aux(cola, cabeza, medir(5)(pasoParalelo(s, dt, cabeza)))
+    }
+
+  }
+```
+
+Se desea demostrar que $P_S(a, b) = S(a, b)$ y que $P_U(s, dt, C) = U(s, dt, C)$.
+
+### `aceleracion`
+
+**Teorema 3.** Para $a > 0$ y $b > 0$, $P_S(a, b) = S(a, b)$.
+
+**Demostración.** $P_S(a, b) \rightarrow a / b = S(a, b)$, una división de `Double` entre `Double`, sin recursión ni estado. $\blacksquare$
+
+La función no hace ninguna llamada recursiva, así que termina en un paso. Se interpreta así: $S > 1$, la versión paralela ganó tiempo; $S = 1$, tardaron lo mismo; $S < 1$, repartir costó más de lo que ahorró.
+
+### `umbralConveniente`
+
+`aux` es de recursión de cola, así que se argumenta con estado e invariante, como en los puntos 2 y 4.
+
+* **Estado:** $(R, m, \theta)$ = `(restantes, mejorUmbral, mejorTiempo)`.
+* **Estado inicial** (si $C = \mu_1 :: \text{cola}$): $(\text{cola},\ \mu_1,\ t_1)$.
+* **Transformación:** con $R = \mu_i :: \text{cola}$ se mide $\mu_i$ **una vez**. Si $t_i < \theta$, el estado pasa a $(\text{cola},\ \mu_i,\ t_i)$; si no, a $(\text{cola},\ m,\ \theta)$.
+* **Estado final:** $R = \text{Nil}$.
+* **Invariante.** Sea $V$ el conjunto de las posiciones de los candidatos que ya no están en $R$ (los vistos). Como $R$ se recorre en orden, toda posición de $V$ es menor que la de cualquier elemento de $R$. Sea $j$ la menor posición de $V$ con tiempo mínimo:
+
+
+$$j = \min\{\, i \in V \mid t_i \leq t_l \text{ para todo } l \in V \,\}$$
+
+La invariante dice que $m = \mu_j$ y $\theta = t_j$, es decir, $m$ es el primer candidato de menor tiempo entre los vistos.
+
+**Teorema 4.** Para $C$ no vacía, $P_U(s, dt, C) = U(s, dt, C)$.
+
+**Demostración.**
+
+1. **Inicio.** Aquí $V = \{1\}$, $m = \mu_1$ y $\theta = t_1$. El único elemento de $V$ es $1$, así que $j = 1$. La invariante se cumple.
+2. **Conservación.** Se supone la invariante con $R = \mu_i :: \text{cola}$ y $m = \mu_j$. Como $i$ es mayor que toda posición de $V$, $i > j$.
+    * Si $t_i < \theta$: $t_i$ es estrictamente menor que todos los $t_l$ con $l \in V$, porque $\theta \leq t_l$. Entonces $i$ es la única posición de $V \cup \{i\}$ con el tiempo mínimo, y el nuevo estado $(\text{cola},\ \mu_i,\ t_i)$ cumple la invariante.
+    * Si $t_i \geq \theta$: el mínimo de $V \cup \{i\}$ sigue siendo $\theta$. Como $i > j$, aunque $t_i = \theta$ la menor posición con ese tiempo sigue siendo $j$. El estado no cambia y la invariante se mantiene.
+3. **Final.** Con $R = \text{Nil}$, $V = \{1, \ldots, k\}$. La invariante dice que $m = \mu_j$ con $j$ la menor posición de menor tiempo, que es $U(s, dt, C)$. $\blacksquare$
+
+### Terminación
+
+La medida es $\lvert R \rvert$. En cada llamado recursivo $R$ pasa de $\mu_i :: \text{cola}$ a $\text{cola}$, con un elemento menos. Como es un natural que decrece en cada paso, llega a $0$, que es el caso base. Esto supone que cada llamada a `medir` y a `pasoParalelo` termina.
+
+### Casos límite
+
+* **`aceleracion` con $b = 0$:** no pertenece a la especificación ($b > 0$). En `Double` la división da infinito, y $0/0$ da `NaN`.
+* **`aceleracion` con $a = 0$:** tampoco pertenece a la especificación ($a > 0$). La división da $0$, sin error.
+* **$C$ vacía:** devuelve `s.length`, que es $n$. No se mide nada.
+* **Un solo candidato:** `aux` arranca con $R = \text{Nil}$ y devuelve $\mu_1$.
+* **Candidatos repetidos o empates:** gana la menor posición, por la invariante. Un valor repetido se mide dos veces y cada aparición tiene su propio $t_i$.
+* **Sistema vacío con $C$ vacía:** $n = 0$, así que devuelve $0$.
+* **Tiempos de una corrida a otra:** dos corridas pueden dar tiempos distintos para el mismo $\mu_i$. La función es correcta respecto a los $t_i$ que midió en esa llamada. Por eso `medir` hace varias repeticiones, cada una con su calentamiento de ScalaMeter, y devuelve la mediana, que reduce el efecto de una corrida atípica.
+
+### Lo que calcula `App.scala`
+
+La aceleración estimada con el punto 4 es 
+
+$$\widehat{S}(n, p, \mu) = \frac{W(n)}{\widehat{T}(n, p, \mu)} = \frac{n}{D_\tau(n) + n/p}$$ 
+
+y es la que `App.scala` calcula con `trabajo(n).toDouble / tiempoEstimado(n, nucleos, u)`.
+
+**Fila de control.** Cuando el umbral es $n$ se cumple $n \leq \tau$, y por el punto 4 $D_\tau(n) = n$: no hay particiones y `pasoParalelo` recorre lo mismo que `pasoSecuencial`. Por eso la aceleración medida debe ser cercana a $1$, y la diferencia es ruido de la medición. La estimada de esa fila es $\frac{n}{n + n/p} = \frac{p}{p+1}$ ($0.89$ con $p = 8$): $\widehat{T}$ suma $D_\tau$ y $W/p$ aunque no haya partes repartidas, así que aquí sobrestima el tiempo. Esto supone que `pasoParalelo` parte solo cuando el segmento es mayor que el umbral, como en el punto 4.
+
+**Fracción serial (ley de Amdahl).** Si una fracción $f$ del trabajo no se reparte y el resto se reparte entre $p$ núcleos, el tiempo paralelo relativo es $f + \frac{1-f}{p}$, y la aceleración es 
+
+$$S = \frac{1}{f + \frac{1-f}{p}} \quad\Longrightarrow\quad \frac{1}{S} = f\left(1 - \frac{1}{p}\right) + \frac{1}{p}
+\quad\Longrightarrow\quad f = \frac{\frac{1}{S} - \frac{1}{p}}{1 - \frac{1}{p}}$$
+
+Por ejemplo, con $S = 2.4$ y $p = 8$: $f = \frac{1/2.4 - 1/8}{1 - 1/8} = \frac{1}{3} \approx 0.33$. Si $S < 1$ la fórmula da $f > 1$, que no tiene sentido como fracción: el paralelo costó más que el secuencial y no se interpreta. Con $p \leq 1$, `fraccionSerial` devuelve $1$, para no dividir entre cero.
+
+### Encadenamiento de los llamados
+
+| Llamado | Cálculo | Valor |
+|---|---|---|
+| `aceleracion(90.0, 36.0)` | $90 / 36$ | $2.5$ |
+| `aceleracion(48.0, 48.0)` | $48 / 48$ | $1.0$ |
+| `aceleracion(10.0, 16.0)` | $10 / 16$ | $0.625$ |
+| `umbralConveniente(s, dt, Nil)` con $n = 4$ | caso $C$ vacío | $4$ |
+
+Para $C = [8, 4, 2]$ con tiempos supuestos $t_1 = 9.0$, $t_2 = 6.5$ y $t_3 = 7.0$:
+
+$$\text{aux}(\text{List}(4, 2), 8, 9.0) \rightarrow \text{aux}(\text{List}(2), 4, 6.5) \rightarrow \text{aux}(\text{Nil}, 4, 6.5) \rightarrow 4$$
+
+
+| Estado $(R, m, \theta)$| Visto $V$| Qué pasa|
+|---|---|---|
+| $(\text{List}(4, 2),\ 8,\ 9.0)$ | $\{1\}$ | estado inicial, $j = 1$|
+| $(\text{List}(2),\ 4,\ 6.5)$| $\{1, 2\}$ | $t_2 = 6.5 < 9.0$: el 4 pasa a ser el mejor, $j = 2$ |
+| $(\text{Nil},\ 4,\ 6.5)$ | $\{1, 2, 3\}$ | $t_3 = 7.0 \geq 6.5$: se conserva el 4, $j = 2$ |
+
+El resultado $4$ es el candidato de menor tiempo, que es $U(s, dt, C)$.
+
+### Conclusión del punto 5
+
+Se demostró que `aceleracion` devuelve $S(a, b) = a/b$ (Teorema 3) y que `umbralConveniente` devuelve el primer candidato de menor tiempo medido (Teorema 4), gracias a la invariante sobre los candidatos vistos. La recursión termina porque $\lvert R\rvert$ decrece. La fila de control de `App.scala` muestra en la práctica que, sin repartir, la medición no introduce una ganancia falsa.
+
+

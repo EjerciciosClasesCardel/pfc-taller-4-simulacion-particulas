@@ -24,7 +24,7 @@ object App {
     // Medición del punto 5
     val dt = 0.01
     val nucleos = Runtime.getRuntime.availableProcessors
-    val tamanos = List(500000, 1000000, 2000000)
+    val tamanos = List(1000000, 1500000, 2000000)
     val repeticiones = 5
 
     // Mismo n, mismo sistema: no hay azar

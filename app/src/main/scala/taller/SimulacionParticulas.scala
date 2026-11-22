@@ -18,19 +18,38 @@ class SimulacionParticulas {
   // Punto 1: un paso de la simulación -----------------------------------------
 
   /** La posición nueva es la anterior más la velocidad por dt. */
-  def mover(p: Particula, dt: Double): Particula = ???
+  def mover(p: Particula, dt: Double): Particula = {
+    val nuevaPos = p.pos + (p.vel * dt)
+    Particula(nuevaPos, p.vel, p.masa)
+  }
 
   /** Avanza todo el sistema un paso de tiempo dt. */
-  def pasoSecuencial(s: Sistema, dt: Double): Sistema = ???
+  def pasoSecuencial(s: Sistema, dt: Double): Sistema = {
+    pasoSegmento(s, dt, 0, s.length)
+  }
 
   /** Avanza solo el tramo entre `desde` incluido y `hasta` excluido. */
-  def pasoSegmento(s: Sistema, dt: Double, desde: Int, hasta: Int): Sistema = ???
+  def pasoSegmento(s: Sistema, dt: Double, desde: Int, hasta: Int): Sistema = {
+    s.slice(desde, hasta).map(p => mover(p, dt))
+  }
 
   /**
    * Parte el sistema por la mitad con `parallel` mientras el tramo tenga más
    * elementos que el umbral, y por debajo de esa cifra resuelve en secuencial.
    */
-  def pasoParalelo(s: Sistema, dt: Double, umbral: Int): Sistema = ???
+  def pasoParalelo(s: Sistema, dt: Double, umbral: Int): Sistema = {
+    if (s.length <= umbral || s.length <= 1) {
+      pasoSecuencial(s, dt)
+    } else {
+      val mitad = s.length / 2
+      
+      val (izq, der) = parallel(
+        pasoParalelo(s.slice(0, mitad), dt, umbral),
+        pasoParalelo(s.slice(mitad, s.length), dt, umbral)
+      )
+      izq ++ der
+    }
+  }
 
   // Punto 2: magnitudes globales ----------------------------------------------
 

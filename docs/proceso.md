@@ -18,7 +18,7 @@ case class Particula(pos: Vector2, vel: Vector2, masa: Double)
 type Sistema = Array[Particula]
 ```
 
-Todos los ejemplos usan este sistema. Las partículas se numeran del 1 al 4 solo para referirse a ellas en las trazas.
+Los ejemplos de los puntos 1 a 4 usan este sistema. Las partículas se numeran del 1 al 4 solo para referirse a ellas en las trazas.
 
 ```scala
 val sistema: Sistema = Array(
@@ -1308,10 +1308,10 @@ val sim = new SimulacionParticulas()
 println(sim.aceleracion(90.0, 36.0)) // 2.5
 println(sim.aceleracion(48.0, 48.0)) // 1.0
 println(sim.aceleracion(10.0, 16.0)) // 0.625
-println(sim.umbralConveniente(Array.empty[Particula], 0.5, Nil)) // 0
+println(sim.umbralConveniente(sistema, 0.5, Nil)) // 4
 ```
 
-El último ejemplo muestra el caso límite: sin partículas y sin candidatos, el tamaño del sistema es cero y eso es lo que devuelve.
+El último ejemplo muestra el caso límite: sin candidatos, devuelve el tamaño del sistema, que aquí es 4.
 
 ## Conclusión del punto 5
 

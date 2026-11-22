@@ -18,7 +18,7 @@ case class Particula(pos: Vector2, vel: Vector2, masa: Double)
 type Sistema = Array[Particula]
 ```
 
-Todos los ejemplos usan este sistema. Las partículas se numeran del 1 al 4 solo para referirse a ellas en las trazas.
+Los ejemplos de los puntos 2 y 4 usan este sistema. Las partículas se numeran del 1 al 4 solo para referirse a ellas en las trazas.
 
 ```scala
 val sistema: Sistema = Array(
@@ -392,6 +392,7 @@ hoja de 3 en el nivel 2, que cuesta 5.
 def tiempoEstimado(n: Int, p: Int, umbral: Int): Double =
   profundidad(n, umbral) + trabajo(n).toDouble / p
 ```
+
 * `tiempoEstimado` recibe `n` partículas, `p` procesadores y el umbral, y devuelve el tiempo estimado como un `Double`.
 * Suma la profundidad, que es lo que no se puede repartir, con el trabajo entre `p`, que es lo que sí se reparte:
   $T_P \approx D + W / P$.
@@ -468,24 +469,25 @@ Las dos funciones de este punto no recorren el sistema: trabajan con tiempos, qu
 
 ## 5.1 `aceleracion`
 
-### Definición del algoritmo 
+### Definición del algoritmo
 
 ```Scala
- def aceleracion(tSecuencial: Double, tParalelo: Double): Double =
-    tSecuencial / tParalelo
+def aceleracion(tSecuencial: Double, tParalelo: Double): Double =
+  tSecuencial / tParalelo
 ```
 * Recibe el tiempo de la versión secuencial y el de la paralela, los dos en milisegundos, y devuelve cuántas veces más rápida fue la paralela.
 * Un resultado mayor que 1 quiere decir que repartir ganó tiempo; igual a 1, que tardaron lo mismo; menor que 1, que repartir costó más de lo que ahorró.
 * No es recursiva: hace una sola división de `Double` entre `Double`, así que no pierde decimales.
 
 ### Seguimiento de la ejecución
+
 Ejemplo principal: `aceleracion(90.0, 36.0)`.
 
 | Paso | Operación | Resultado |
 |---|---|---|
 | 1 | `90.0 / 36.0` | 2.5 |
 
-Resultado: `2.5`. El paralelo fue dos veces y media más rápido.
+Resultado: `2.5`. El paralelo fue 2.5 veces más rápido.
 
 Otros dos casos, para ver los tres significados:
 
@@ -502,7 +504,7 @@ La función no llama a otras: la pila tiene un solo elemento.
 |---|---|---|
 | 1 | `aceleracion` | calcula `90.0 / 36.0` y devuelve 2.5 |
 
-### Diagrama de llamados 
+### Diagrama de llamados
 
 ```mermaid
 sequenceDiagram
@@ -518,23 +520,23 @@ El diagrama representa el cálculo dentro de la única llamada a `aceleracion`; 
 ### Definición del algoritmo
 
 ```Scala
- def umbralConveniente(s: Sistema, dt: Double, umbrales: List[Int]): Int = {
-    // Recorre los candidatos que faltan y recuerda el mejor umbral y su tiempo.
-    @tailrec
-    def aux(restantes: List[Int], mejorUmbral: Int, mejorTiempo: Double): Int =
-      restantes match {
-        case Nil => mejorUmbral
-        case cabeza :: cola =>
-          val tiempo = medir(5)(pasoParalelo(s, dt, cabeza))
-          if (tiempo < mejorTiempo) aux(cola, cabeza, tiempo)
-          else aux(cola, mejorUmbral, mejorTiempo)
-      }
-    umbrales match {
-      case Nil => s.length
-      case cabeza :: cola => aux(cola, cabeza, medir(5)(pasoParalelo(s, dt, cabeza)))
+def umbralConveniente(s: Sistema, dt: Double, umbrales: List[Int]): Int = {
+  // Recorre los candidatos que faltan y recuerda el mejor umbral y su tiempo.
+  @tailrec
+  def aux(restantes: List[Int], mejorUmbral: Int, mejorTiempo: Double): Int =
+    restantes match {
+      case Nil => mejorUmbral
+      case cabeza :: cola =>
+        val tiempo = medir(5)(pasoParalelo(s, dt, cabeza))
+        if (tiempo < mejorTiempo) aux(cola, cabeza, tiempo)
+        else aux(cola, mejorUmbral, mejorTiempo)
     }
-
+    
+  umbrales match {
+    case Nil => s.length
+    case cabeza :: cola => aux(cola, cabeza, medir(5)(pasoParalelo(s, dt, cabeza)))
   }
+}
 ```
 
 * Si la lista de candidatos está vacía, devuelve `s.length`: un umbral igual al tamaño del sistema no parte nada, que equivale a no repartir.
@@ -560,7 +562,7 @@ Los tiempos reales dependen de la máquina; para ver cómo avanza `aux` se supon
 | Paso| `restantes`| `mejorUmbral` | `mejorTiempo`| Operación |
 |----|----|----|----|----|
 | 0 | `List(4, 2)` | 8| 9.0| Estado inicial, después de medir el umbral 8 |
-| 1| `List(4, 2)`| 8| 9.0 | Mide 4: `6.5 < 9.0`, actualiza el mejor |
+| 1| `List(4, 2)`| 8| 9.0 | Mide 4: `6.5 < 9.0`, actualiza el mejor|
 | 2 | `List(2)` | 4 | 6.5 | Mide 2: `7.0 < 6.5` es falso, conserva el mejor | 
 | 3 | `Nil` | 4 | 6.5 | Caso base: devuelve 4 |
 
@@ -647,7 +649,7 @@ println(sim.aceleracion(90.0, 36.0)) // 2.5
 println(sim.aceleracion(48.0, 48.0)) // 1.0
 println(sim.aceleracion(10.0, 16.0)) // 0.625
 println(sim.umbralConveniente(Array.empty[Particula], 0.5, Nil)) // 0
-```  
+```
 
 El último ejemplo muestra el caso límite: sin partículas y sin candidatos, el tamaño del sistema es cero y eso es lo que devuelve.
 
@@ -658,6 +660,4 @@ El último ejemplo muestra el caso límite: sin partículas y sin candidatos, el
 `umbralConveniente` recorre los candidatos con una recursión de cola, mide cada uno una sola vez y conserva el de menor tiempo; con la lista vacía devuelve el tamaño del sistema.
 
 `App.scala` hace las mediciones con varios tamaños y umbrales y usa `aceleracion` para comparar los tiempos. Imprime una tabla con la aceleración medida, la estimada con el punto 4 y la fracción serial. La fila de control, donde el umbral es igual al tamaño del sistema, muestra que sin repartir el trabajo la aceleración queda cerca de 1.
-
-
 

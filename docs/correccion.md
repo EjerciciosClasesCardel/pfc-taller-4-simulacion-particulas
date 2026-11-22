@@ -512,10 +512,7 @@ Los tiempos se miden en milisegundos con `medir(5)`. Que esos tiempos sean exact
 
 La aceleración de un tiempo secuencial $a > 0$ frente a uno paralelo $b > 0$ es
 
-
-$$
-S(a,b) = \frac{a}{b}
-$$
+$$S(a,b) = \frac{a}{b}$$
 
 Sea $C = [\mu_1, \ldots, \mu_k]$ la lista de umbrales candidatos y $t_i$ el tiempo que `medir(5)` devuelve al medir `pasoParalelo` con el umbral $\mu_i$. Cada posición $i$ se mide una sola vez, así que un valor repetido en $C$ tiene un $t_i$ por cada aparición. Si $k \geq 1$, el resultado es el primer candidato de menor tiempo:
 
@@ -526,27 +523,26 @@ Si $C$ está vacía, $U(s, dt, C) = n$, donde $n = \lvert s \rvert$: con ese umb
 Sean $P_S$ y $P_U$ los programas `aceleracion` y `umbralConveniente`:
 
 ```Scala
+def aceleracion(tSecuencial: Double, tParalelo: Double): Double =
+  tSecuencial / tParalelo
 
- def aceleracion(tSecuencial: Double, tParalelo: Double): Double =
-    tSecuencial / tParalelo
-
- def umbralConveniente(s: Sistema, dt: Double, umbrales: List[Int]): Int = {
-    // Recorre los candidatos que faltan y recuerda el mejor umbral y su tiempo.
-    @tailrec
-    def aux(restantes: List[Int], mejorUmbral: Int, mejorTiempo: Double): Int =
-      restantes match {
-        case Nil => mejorUmbral
-        case cabeza :: cola =>
-          val tiempo = medir(5)(pasoParalelo(s, dt, cabeza))
-          if (tiempo < mejorTiempo) aux(cola, cabeza, tiempo)
-          else aux(cola, mejorUmbral, mejorTiempo)
-      }
-    umbrales match {
-      case Nil => s.length
-      case cabeza :: cola => aux(cola, cabeza, medir(5)(pasoParalelo(s, dt, cabeza)))
+def umbralConveniente(s: Sistema, dt: Double, umbrales: List[Int]): Int = {
+  // Recorre los candidatos que faltan y recuerda el mejor umbral y su tiempo.
+  @tailrec
+  def aux(restantes: List[Int], mejorUmbral: Int, mejorTiempo: Double): Int =
+    restantes match {
+      case Nil => mejorUmbral
+      case cabeza :: cola =>
+        val tiempo = medir(5)(pasoParalelo(s, dt, cabeza))
+        if (tiempo < mejorTiempo) aux(cola, cabeza, tiempo)
+        else aux(cola, mejorUmbral, mejorTiempo)
     }
-
+    
+  umbrales match {
+    case Nil => s.length
+    case cabeza :: cola => aux(cola, cabeza, medir(5)(pasoParalelo(s, dt, cabeza)))
   }
+}
 ```
 
 Se desea demostrar que $P_S(a, b) = S(a, b)$ y que $P_U(s, dt, C) = U(s, dt, C)$.
@@ -568,7 +564,6 @@ La función no hace ninguna llamada recursiva, así que termina en un paso. Se i
 * **Transformación:** con $R = \mu_i :: \text{cola}$ se mide $\mu_i$ **una vez**. Si $t_i < \theta$, el estado pasa a $(\text{cola},\ \mu_i,\ t_i)$; si no, a $(\text{cola},\ m,\ \theta)$.
 * **Estado final:** $R = \text{Nil}$.
 * **Invariante.** Sea $V$ el conjunto de las posiciones de los candidatos que ya no están en $R$ (los vistos). Como $R$ se recorre en orden, toda posición de $V$ es menor que la de cualquier elemento de $R$. Sea $j$ la menor posición de $V$ con tiempo mínimo:
-
 
 $$j = \min\{\, i \in V \mid t_i \leq t_l \text{ para todo } l \in V \,\}$$
 

@@ -52,7 +52,7 @@ pruebas del taller comparan con una tolerancia, como pide el enunciado.
 Sea un sistema de $n$ partículas: $s = [p_0, p_1, \ldots, p_{n-1}]$, cada partícula tiene posición $r_i$, velocidad $v_i$
 y masa $m_i$.
 
-Al avanzar un tiempo $dt$, la nueva posición es: $r_i' = r_i + v_i \cdot dt$, la velocidad y la masa 
+Al avanzar un tiempo $dt$, la nueva posición es: $r_i' = r_i + v_i \cdot dt$, la velocidad y la masa
 permanecen constantes
 
 - $s$: sistema o arreglo de partículas
@@ -97,7 +97,7 @@ Para cada índice local $i$, con $0 \leq i < k$, se procesa la partícula origin
 Por lo tanto, se procesan exactamente los índices: $desde, desde + 1, \ldots, hasta - 1$
 ninguna partícula del intervalo se omite o se repite
 
-### `pasoSecuencial` 
+### `pasoSecuencial`
 
 La función ejecuta:
 
@@ -105,14 +105,14 @@ La función ejecuta:
 pasoSegmento(s, dt, 0, s.length)
 ```
 
-Como el intervalo es $[0, n)$, se procesan todas las partículas una sola vez. 
+Como el intervalo es $[0, n)$, se procesan todas las partículas una sola vez.
 Así, el resultado secuencial es: $S(s,dt) = [mover(p_0, dt), \ldots, mover(p_{n - 1}, dt)]$
 
 - $S(s, dt)$: Resultado de avanzar todas las partículas del sistema
 
 ### `pasoParalelo`
 
-La función divide el sistema mientras el tamaño del tramo sea mayor que el umbral, para evitar divisiones indefinidas 
+La función divide el sistema mientras el tamaño del tramo sea mayor que el umbral, para evitar divisiones indefinidas
 se usa: $tope = \max(umbral, 1)$
 
 El punto medio del intervalo se calcula como: $m = desde + \left\lfloor\frac{hasta - desde}{2}\right\rfloor$
@@ -141,7 +141,7 @@ Si $k\leq tope$, la función llama a `pasoSegmento`, que ya demostró procesar c
 
 Si $k > tope$, la función divide el intervalo en dos segmentos más pequeños
 
-Suponemos que cada segmento devuelve correctamente sus partículas transformadas. Finalmente, el 
+Suponemos que cada segmento devuelve correctamente sus partículas transformadas. Finalmente, el
 programa combina ambos resultados:
 
 ```scala
@@ -150,7 +150,7 @@ izq ++ der
 
 La concatenación conserva el orden y es asociativa $(A++B)++C = A++(B++C)$
 
-Por ello, el resultado contiene todas las partículas transformadas, en el mismo orden que la versión secuencial 
+Por ello, el resultado contiene todas las partículas transformadas, en el mismo orden que la versión secuencial
 
 Se concluye que $pasoParalelo(s, dt, u) = pasoSecuencial(s, dt)$
 
@@ -188,8 +188,8 @@ Tanto `pasoSecuencial` como `pasoParalelo` deben producir el mismo resultado
 
 ### Conclusión del punto 1
 
-Las cuatro funciones cumplen las especificaciones del movimiento. La paralela procesa los mismos elementos que la 
-secuencial, sin pérdidas ni repeticiones, conserva su orden y termina para cualquier tamaño de sistema y umbral entero 
+Las cuatro funciones cumplen las especificaciones del movimiento. La paralela procesa los mismos elementos que la
+secuencial, sin pérdidas ni repeticiones, conserva su orden y termina para cualquier tamaño de sistema y umbral entero
 
 
 ## Punto 2. Magnitudes globales
@@ -382,8 +382,8 @@ incluido el vacío, y que las tres terminan tras $n$ pasos.
 
 ### Especificación
 
-Para un sistema de $n$ partículas, las funciones `energiaParalela` y `centroDeMasaParalelo` 
-deben calcular las mismas magnitudes que sus versiones secuenciales. 
+Para un sistema de $n$ partículas, las funciones `energiaParalela` y `centroDeMasaParalelo`
+deben calcular las mismas magnitudes que sus versiones secuenciales.
 
 - La energía cinética total es: $E(s) = \sum_{i = 0}^{n - 1}\frac{1}{2}m_i\|v_i\|^2$
 - La masa total es: $M(s) = \sum_{i = 0}^{n-1}m_i$
@@ -409,7 +409,7 @@ $
 
 ### `energiaParalela`
 
-La función divide el sistema en segmentos usando `parallel`. Cuando el tamaño de un segmento es menor o 
+La función divide el sistema en segmentos usando `parallel`. Cuando el tamaño de un segmento es menor o
 igual al tope, la función interna `segmento` calcula su energía mediante recursión de cola.
 
 Sea un intervalo $[a, b)$
@@ -429,36 +429,36 @@ La función combina los resultados con:
 izq + der
 ```
 
-La suma es asociativa: $(E_1 + E_2) + E_3 = E_1 + (E_2 + E_3)$ 
+La suma es asociativa: $(E_1 + E_2) + E_3 = E_1 + (E_2 + E_3)$
 
 - $E_1$, $E_2$ y $E_3$: Energías parciales usadas para explicar la asociatividad
 
-Por lo que podemos sumar los resultados de cada segmento y obtener la misma energía total. 
+Por lo que podemos sumar los resultados de cada segmento y obtener la misma energía total.
 Sin embargo, pueden aparecer pequeñas diferencias debido al redondeo de los números decimales
 
 ### Demostración de corrección de `energiaParalela`
 
-Para comprobar que funciona correctamente, analizamos dos situaciones: cuando el segmento es pequeño y se calcula 
+Para comprobar que funciona correctamente, analizamos dos situaciones: cuando el segmento es pequeño y se calcula
 directamente, y cuando es grande y se divide en dos partes:
 
 #### Caso base
 
-Cuando el segmento tiene un tamaño menor o igual al tope, `segmento` recorre sus partículas, acumulando la energía 
+Cuando el segmento tiene un tamaño menor o igual al tope, `segmento` recorre sus partículas, acumulando la energía
 desde cero. El acumulador contiene la suma de las energías ya procesadas
 
 #### Caso inductivo
 
 Cuando el intervalo supere el tope, se divide en dos mitades más pequeñas
 
-Al sumar ambos resultados obtenemos la energía del segmento: $E_{izq}+E_{der}=E_{a,b}$. Cuando se procesa 
+Al sumar ambos resultados obtenemos la energía del segmento: $E_{izq}+E_{der}=E_{a,b}$. Cuando se procesa
 el sistema completo, este resultado corresponde a $E(s)$
 
 Por tanto $energiaParalela(s, u) = energiaSecuencial(s)$
 
 ### `centroDeMasaParalelo`
 
-Para calcular el centro de masa no se deben promediar directamente los centros de las mitades, porque sus 
-masas pueden ser diferentes. La función conserva dos resultados parciales: $A = (R_A, M_A)$ y 
+Para calcular el centro de masa no se deben promediar directamente los centros de las mitades, porque sus
+masas pueden ser diferentes. La función conserva dos resultados parciales: $A = (R_A, M_A)$ y
 $B = (R_B, M_B)$
 
 - $R$: Suma ponderada de posiciones
@@ -475,11 +475,11 @@ La función `combinar` realiza:
 
 Matemáticamente: $A\oplus B = (R_A + R_B,\ M_A + M_B)$
 
-### Asociatividad de la combinación 
+### Asociatividad de la combinación
 
 Para tres resultados parciales $A$, $B$ y $C$: $(A\oplus B)\oplus C$ produce $(R_A + R_B + R_C,\ M_A + M_B + M_C)$ y
 $A\oplus(B\oplus C)$ produce las mismas sumas al realizar las operaciones matemáticas
-Por lo tanto, $(A\oplus B)\oplus C = A\oplus(B\oplus C)$ 
+Por lo tanto, $(A\oplus B)\oplus C = A\oplus(B\oplus C)$
 
 - $\oplus$: Operación que combina dos resultados parciales, sumando sus posiciones ponderadas y sus masas
 
@@ -495,23 +495,23 @@ ponderada de sus posiciones y la masa total: $\left(\sum m_i r_i,\sum m_i\right)
 
 #### Caso inductivo
 
-Cuando el segmento supera el tope, se divide en dos intervalos más pequeños. 
+Cuando el segmento supera el tope, se divide en dos intervalos más pequeños.
 
-Suponemos que la función calcula correctamente el resultado de cada mitad. Al usar `combinar`, 
+Suponemos que la función calcula correctamente el resultado de cada mitad. Al usar `combinar`,
 se obtiene: $R = R_{izq} + R_{der}$ y $M = M_{izq} + M_{der}$
 
-Como los intervalos cubren todas las partículas sin repetirse, esas sumas corresponden al sistema completo, 
+Como los intervalos cubren todas las partículas sin repetirse, esas sumas corresponden al sistema completo,
 y finalmente, la división se realiza una sola vez: $C(s) = \frac{R}{M}$
 
-Si $M = 0$, la función devuelve el origen $(0, 0)$ y evita dividir entre cero, 
+Si $M = 0$, la función devuelve el origen $(0, 0)$ y evita dividir entre cero,
 por tanto, $centroDeMasaParalelo(s, u) = centroDeMasaSecuencial(s)$
 
-### Terminación 
+### Terminación
 
 En ambas funciones paralelas, la función interna `segmento` avanza de una partícula a la siguiente hasta alcanzar
 el índice `hasta`
 
-Las funciones `aux` dividen los intervalos en segmentos cada vez más pequeños hasta alcanzar el tope, 
+Las funciones `aux` dividen los intervalos en segmentos cada vez más pequeños hasta alcanzar el tope,
 que es como mínimo 1
 
 Así, ambas funciones paralelas terminan, incluso cuando el sistema está vacío
@@ -525,8 +525,8 @@ Se consideran dos partículas:
 | a         |    2 | (-1,0)    |
 | c         |    2 | (3,0)     |
 
-La energía de cada partícula es: $E_a = \frac12(2)(1^2) = 1$ y $E_c = \frac12(2)(3^2) = 9$, 
-dando como resultado $E = 1 + 9 = 10$, por lo tanto: 
+La energía de cada partícula es: $E_a = \frac12(2)(1^2) = 1$ y $E_c = \frac12(2)(3^2) = 9$,
+dando como resultado $E = 1 + 9 = 10$, por lo tanto:
 
 ```scala
 energiaParalela(Array(a, c), 1) == 10.0
@@ -542,7 +542,7 @@ Se consideran tres partículas de igual masa:
 | b         | (8,0)    |    2 |
 | c         | (0,0)    |    2 |
 
-La suma ponderada es: 
+La suma ponderada es:
 
 $R = (4, 0)(2) + (8, 0)(2) + (0, 0)(2) = (24, 0)$
 
@@ -561,7 +561,7 @@ centroDeMasaParalelo(Array(a, b, c), 1) == Vector2(4, 0)
 
 ### Consideración sobre números decimales
 
-Las demostraciones anteriores utilizan operaciones matemáticas sin errores de redondeo. Sin embargo, 
+Las demostraciones anteriores utilizan operaciones matemáticas sin errores de redondeo. Sin embargo,
 Scala usa el tipo `Double`, por lo que pueden aparecer pequeñas diferencias en los resultados cuando
 cambia el orden de las sumas. Por esa razón, los resultados decimales se comprueban con una tolerancia pequeña.
 
@@ -570,7 +570,7 @@ cambia el orden de las sumas. Por esa razón, los resultados decimales se compru
 Se demostró que las versiones paralelas calculan las mismas magnitudes que las secuenciales, aunque pueden
 presentarse pequeñas diferencias de redondeo.
 
-La energía se combina mediante una suma asociativa, el centro de masa combina parejas de suma ponderada y masa total, 
+La energía se combina mediante una suma asociativa, el centro de masa combina parejas de suma ponderada y masa total,
 también mediante una operación asociativa, y divide una sola vez al final.
 
 Ambas funciones reparten el trabajo sin perder ni repetir partículas y terminan correctamente

@@ -46,8 +46,8 @@ otros valores en sus parámetros. Por eso en las tablas de pila se muestra el es
 
 En este punto se implementan cuatro funciones: `mover`, `pasoSegmento`, `pasoSecuencial` y `pasoParalelo`
 
-El objetivo es actualizar la posición de cada partícula según su velocidad y el tiempo transcurrido, 
-sin modificar su velocidad ni su masa. También se compara cómo se realiza este proceso de manera secuencial 
+El objetivo es actualizar la posición de cada partícula según su velocidad y el tiempo transcurrido,
+sin modificar su velocidad ni su masa. También se compara cómo se realiza este proceso de manera secuencial
 y paralela.
 
 ## 1.1 `mover`
@@ -59,7 +59,7 @@ def mover(p: Particula, dt: Double): Particula =
   Particula(p.pos + p.vel * dt, p.vel, p.masa)
 ```
 
-La función recibe una partícula `p` y un intervalo de tiempo `dt`. Calcula la nueva posición 
+La función recibe una partícula `p` y un intervalo de tiempo `dt`. Calcula la nueva posición
 mediante $r' = r + v \cdot dt$
 
 - `p.pos`: Posición original de la partícula
@@ -116,7 +116,7 @@ sin incluir `hasta`
 1. Se calcula la cantidad de elementos mediante `hasta` - `desde`
 2. `Array.tabulate` recorre los índices locales desde 0
 3. El índice original se obtiene sumando desde + i
-4. Se llama a `mover` para transformar cada partícula 
+4. Se llama a `mover` para transformar cada partícula
 5. Se devuelve un nuevo arreglo con los resultados
 
 ### Seguimiento de la ejecución
@@ -159,10 +159,10 @@ def pasoSecuencial(s: Sistema, dt: Double): Sistema =
   pasoSegmento(s, dt, 0, s.length)
 ```
 
-Esta función usa `pasoSegmento` para recorrer el arreglo completo, desde el índice 0 hasta `s.length`, 
+Esta función usa `pasoSegmento` para recorrer el arreglo completo, desde el índice 0 hasta `s.length`,
 sin incluir este último
 
-### Seguimiento de la ejecución 
+### Seguimiento de la ejecución
 
 Ejecutamos:
 
@@ -188,7 +188,7 @@ Array(
 )
 ```
 
-Estos valores representan únicamente las posiciones. Las partículas completas también conservan sus 
+Estos valores representan únicamente las posiciones. Las partículas completas también conservan sus
 velocidades y masas
 
 ### Estado de la pila de llamados
@@ -245,7 +245,7 @@ Cuando el tamaño del segmento es menor o igual al tope, se llama directamente a
 
 #### Caso recursivo
 
-Cuando el tamaño supera el tope, el segmento se divide en dos partes. Cada mitad se procesa mediante `aux` 
+Cuando el tamaño supera el tope, el segmento se divide en dos partes. Cada mitad se procesa mediante `aux`
 y ambas se combinan usando `izq ++ der`.
 
 El umbral controla cuándo deja de dividir el sistema
@@ -294,7 +294,7 @@ Los pasos de las dos mitades pueden ejecutarse simultáneamente; no existe un or
 
 ### Estado de la pila de llamados
 
-A diferencia de las funciones con recursión de cola, `aux` utiliza recursión de árbol, porque debe esperar el 
+A diferencia de las funciones con recursión de cola, `aux` utiliza recursión de árbol, porque debe esperar el
 resultado de ambas mitades antes de realizar la concatenación
 
 | Rama      | Llamado      | Qué sucede                                           |
@@ -304,7 +304,7 @@ resultado de ambas mitades antes de realizar la concatenación
 | Derecha   | `aux(2,4)`   | Ejecuta `pasoSegmento` y devuelve dos partículas     |
 | Principal | `izq ++ der` | Combina ambos arreglos y devuelve el resultado final |
 
-Con este ejemplo, cada rama de `aux` alcanza máximo dos niveles de llamados de `aux`. La ejecución real puede 
+Con este ejemplo, cada rama de `aux` alcanza máximo dos niveles de llamados de `aux`. La ejecución real puede
 utilizar diferentes hilos para los trabajos paralelos
 
 ### Diagrama de llamados
@@ -346,11 +346,11 @@ Estas expresiones muestran los resultados esperados de las llamadas
 
 ### Conclusión del punto 1
 
-Las funciones permiten actualizar las posiciones de las partículas conservando sus velocidades y masas. 
-`pasoSecuencial` procesa el sistema completo mediante un solo segmento, mientras que `pasoParalelo` divide el 
+Las funciones permiten actualizar las posiciones de las partículas conservando sus velocidades y masas.
+`pasoSecuencial` procesa el sistema completo mediante un solo segmento, mientras que `pasoParalelo` divide el
 trabajo en intervalos y combina los resultados.
 
-En el ejemplo utilizado, ambas versiones producen las mismas cuatro partículas actualizadas y mantienen su 
+En el ejemplo utilizado, ambas versiones producen las mismas cuatro partículas actualizadas y mantienen su
 orden original.
 
 
@@ -577,8 +577,8 @@ cuando no hay masa.
 
 # Punto 3. Magnitudes globales en paralelo
 
-En este punto se implementan las funciones `energiaParalela` y `centroDeMasaParalelo`. Las dos funciones distribuyen 
-el procesamiento de las partículas mediante `parallel`. Cuando un segmento es suficientemente pequeño, utilizan 
+En este punto se implementan las funciones `energiaParalela` y `centroDeMasaParalelo`. Las dos funciones distribuyen
+el procesamiento de las partículas mediante `parallel`. Cuando un segmento es suficientemente pequeño, utilizan
 recursión de cola para recorrerlo de forma secuencial.
 
 Se utiliza el sistema de cuatro partículas presentado al principio del informe
@@ -629,11 +629,11 @@ La función calcula la energía cinética de todas las partículas: $E = \sum_{i
 
 ### Explicación paso a paso
 
-La ejecución se divide en dos funciones internas. 
+La ejecución se divide en dos funciones internas.
 
-- `Función segmento`: Recorre un intervalo, calcula la rapidez de cada partícula y acumula su energía 
+- `Función segmento`: Recorre un intervalo, calcula la rapidez de cada partícula y acumula su energía
   cinética mediante recursión de cola
-- `Función aux`: Divide el intervalo mientras su tamaño supere el tope, ejecuta las mitades mediante `parallel` 
+- `Función aux`: Divide el intervalo mientras su tamaño supere el tope, ejecuta las mitades mediante `parallel`
   y suma las energías parciales
 
 ### Seguimiento de la ejecución
@@ -644,7 +644,7 @@ Ejecutamos:
 energiaParalela(sistema, 2)
 ```
 
-El sistema contiene cuatro partículas. El tope es 2, por lo que se forman los segmentos [0, 2) y [2, 4). 
+El sistema contiene cuatro partículas. El tope es 2, por lo que se forman los segmentos [0, 2) y [2, 4).
 
 Primero calculamos la energía de cada partícula:
 
@@ -671,9 +671,9 @@ Segmento derecho [2, 4):
 | `segmento(3,4,1.5)`   | 100.0            | 101.5      |
 | `segmento(4,4,101.5)` | Caso base        | 101.5      |
 
-Al finalizar, `aux` suma los resultados parciales: 
+Al finalizar, `aux` suma los resultados parciales:
 
-$E = 27 + 101.5 = 128.5$  
+$E = 27 + 101.5 = 128.5$
 
 Resultando:
 
@@ -694,7 +694,7 @@ La función `aux` usa recursión de árbol, mientras que `segmento` utiliza recu
 | Derecha   | `segmento(4,4,101.5)` | Devuelve 101.5                    |
 | Principal | `izq + der`           | Devuelve 128.5                    |
 
-En `segmento`, la recursión de cola permite reutilizar la activación correspondiente durante el recorrido. 
+En `segmento`, la recursión de cola permite reutilizar la activación correspondiente durante el recorrido.
 En `aux`, los llamados de las mitades deben completarse antes de realizar la suma final
 
 ### Diagrama de llamados
@@ -774,7 +774,7 @@ def centroDeMasaParalelo(
 }
 ```
 
-La función calcula el centro de masa del sistema mediante: $C=\frac{\sum m_i r_i}{\sum m_i}$ 
+La función calcula el centro de masa del sistema mediante: $C=\frac{\sum m_i r_i}{\sum m_i}$
 
 Cuando la masa total es cero, devuelve Vector2(0.0, 0.0)
 
@@ -782,13 +782,13 @@ Cuando la masa total es cero, devuelve Vector2(0.0, 0.0)
 
 La función usa tres operaciones internas
 
-- `Función segmento`: Recorre las partículas del intervalo y acumula dos valores: la suma de posiciones ponderadas 
+- `Función segmento`: Recorre las partículas del intervalo y acumula dos valores: la suma de posiciones ponderadas
   por la masa y la masa total
 - `Función aux`: Divide los segmentos grandes y ejecuta las mitades en paralelo
 - `Función combinar`: Suma las posiciones ponderadas y las masas de ambas mitades
 
-Es importante no calcular ni promediar los centros de masa de las mitades por separado, porque las masas de esos 
-segmentos pueden ser diferentes 
+Es importante no calcular ni promediar los centros de masa de las mitades por separado, porque las masas de esos
+segmentos pueden ser diferentes
 
 ### Seguimiento de la ejecución
 
@@ -807,7 +807,7 @@ Primero calculamos la contribución de cada partícula
 | 3         | (0, 6)   | 3    | (0, 18)         |
 | 4         | (2, 2)   | 2    | (4, 4)          |
 
-Segmento izquierdo [0, 2): 
+Segmento izquierdo [0, 2):
 
 | Índice                 | Suma ponderada acumulada | Masa acumulada |
 |------------------------|--------------------------|----------------|
@@ -850,7 +850,7 @@ El resultado considera la posición y la masa de cada partícula.
 
 ### Estado de la pila de llamados
 
-`aux` usa recursión de árbol para dividir los segmentos, y `segmento` utiliza recursión de cola para 
+`aux` usa recursión de árbol para dividir los segmentos, y `segmento` utiliza recursión de cola para
 acumular los resultados
 
 | Rama      | Llamado                     | Resultado            |
@@ -898,7 +898,7 @@ centroDeMasaParalelo(sistema, 2) ==
 
 El resultado considera la posición y la masa de cada partícula
 
-#### Ejemplo 3: Sistema vacío 
+#### Ejemplo 3: Sistema vacío
 
 ```Scala
 energiaParalela(Array.empty[Particula], 2) == 0.0
@@ -913,14 +913,14 @@ se representa mediante el origen
 
 ### Conclusión del punto 3
 
-Las funciones `energiaParalela` y `centroDeMasaParalelo` permiten calcular magnitudes globales distribuyendo el 
+Las funciones `energiaParalela` y `centroDeMasaParalelo` permiten calcular magnitudes globales distribuyendo el
 procesamiento de las partículas en diferentes segmentos.
 
-La energía se obtiene sumando los resultados parciales. El centro de masa se calcula acumulando primero las 
+La energía se obtiene sumando los resultados parciales. El centro de masa se calcula acumulando primero las
 posiciones ponderadas y las masas, realizando la división una sola vez al finalizar
 
-En el sistema de ejemplo, los resultados esperados son una energía total de 128.5 y un centro de masa de (1.0, 2.75). 
-Estos valores coinciden con los cálculos secuenciales del punto 2, salvo posibles diferencias de redondeo en otros 
+En el sistema de ejemplo, los resultados esperados son una energía total de 128.5 y un centro de masa de (1.0, 2.75).
+Estos valores coinciden con los cálculos secuenciales del punto 2, salvo posibles diferencias de redondeo en otros
 sistemas
 
 # Punto 4. Trabajo y profundidad

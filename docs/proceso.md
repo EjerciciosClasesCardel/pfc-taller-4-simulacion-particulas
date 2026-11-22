@@ -18,7 +18,7 @@ case class Particula(pos: Vector2, vel: Vector2, masa: Double)
 type Sistema = Array[Particula]
 ```
 
-Todos los ejemplos usan este sistema. Las partículas se numeran del 1 al 4 solo para referirse a ellas en las trazas.
+Los ejemplos de los puntos 1 a 4 usan este sistema. Las partículas se numeran del 1 al 4 solo para referirse a ellas en las trazas.
 
 ```scala
 val sistema: Sistema = Array(

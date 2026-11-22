@@ -57,5 +57,29 @@ object App {
 
       }
     }
+
+    // Mediciones punto 3
+
+    println("| Funcion | n | Umbral | T sec (ms) | T par (ms) | Aceleracion |")
+    println("|---|---|---|---|---|---|")
+    tamanos.foreach{ n =>
+      val s = crear(n)
+      val umbrales = List(n, n/2, n/8, n/64, n/512).distinct
+
+      val tES = medir(repeticiones)(energiaSecuencial(s))
+      val tCS = medir(repeticiones)(centroDeMasaSecuencial(s))
+
+      umbrales.foreach { u =>
+        val tEP = medir(repeticiones)(energiaParalela(s, u))
+        val tCP = medir(repeticiones)(centroDeMasaParalelo(s, u))
+
+        println(s"| Energía | $n | $u | ${fmt(tES)} | ${fmt(tEP)} | ${fmt(aceleracion(tES, tEP))} | ")
+
+        println(s"| Centro de masa | $n | $u | ${fmt(tCS)} | ${fmt(tCP)} | ${fmt(aceleracion(tCS, tCP))} | ")
+      }
+
+    }
+
+
   }
 }

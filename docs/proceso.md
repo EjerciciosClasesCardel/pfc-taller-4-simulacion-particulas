@@ -18,7 +18,7 @@ case class Particula(pos: Vector2, vel: Vector2, masa: Double)
 type Sistema = Array[Particula]
 ```
 
-Los ejemplos de los puntos 2 y 4 usan este sistema. Las partículas se numeran del 1 al 4 solo para referirse a ellas en las trazas.
+Todos los ejemplos usan este sistema. Las partículas se numeran del 1 al 4 solo para referirse a ellas en las trazas.
 
 ```scala
 val sistema: Sistema = Array(
@@ -41,6 +41,318 @@ Las funciones de los puntos 2 y 4 recorren el sistema con una función interna `
 marcada con `@tailrec`. En una recursión de cola la llamada recursiva es lo último que hace la función, así que el
 compilador la convierte en un ciclo y la **pila no crece**: en cada paso hay una sola activación de `aux`, con
 otros valores en sus parámetros. Por eso en las tablas de pila se muestra el estado de esa única activación en cada paso.
+
+# Punto 1. Un paso de la simulación
+
+En este punto se implementan cuatro funciones: `mover`, `pasoSegmento`, `pasoSecuencial` y `pasoParalelo`
+
+El objetivo es actualizar la posición de cada partícula según su velocidad y el tiempo transcurrido, 
+sin modificar su velocidad ni su masa. También se compara cómo se realiza este proceso de manera secuencial 
+y paralela.
+
+## 1.1 `mover`
+
+### Definición del algoritmo
+
+```Scala
+def mover(p: Particula, dt: Double): Particula =
+  Particula(p.pos + p.vel * dt, p.vel, p.masa)
+```
+
+La función recibe una partícula `p` y un intervalo de tiempo `dt`. Calcula la nueva posición 
+mediante $r' = r + v \cdot dt$
+
+- `p.pos`: Posición original de la partícula
+- `p.vel`: Velocidad de la partícula
+- `dt`: Tiempo transcurrido
+- `p.masa`: Masa que se conserva sin modificaciones
+
+### Seguimiento de la ejecución
+
+Tomamos la primera partícula del sistema de ejemplo:
+
+- Posición: (0, 0)
+- Velocidad: (3, 4)
+- Masa: 2.0
+- Tiempo: dt = 2
+
+Calculamos la nueva posición: $r' = (0, 0) + (3, 4)\cdot 2 = (6, 8)$
+
+| Elemento  | Valor original | Resultado |
+|-----------|----------------|-----------|
+| Posición  | (0, 0)         | (6, 8)    |
+| Velocidad | (3, 4)         | (3, 4)    |
+| Masa      | 2.0            | 2.0       |
+
+Resultado: Particula(Vector2(6, 8), Vector2(3, 4), 2.0)
+
+### Estado de la pila de llamados
+
+`mover` no usa recursión. Se ejecuta una sola llamada, construye una nueva partícula y devuelve el resultado
+
+## 1.2 `pasoSegmento`
+
+### Definición del algoritmo
+
+```Scala
+def pasoSegmento(
+  s: Sistema,
+  dt: Double,
+  desde: Int,
+  hasta: Int
+): Sistema =
+  Array.tabulate(hasta - desde)(
+    i => mover(s(desde + i), dt)
+  )
+```
+
+Esta función actualiza únicamente las partículas comprendidas entre los índices `desde` y `hasta`,
+sin incluir `hasta`
+
+`Array.tabulate` construye un nuevo arreglo aplicando `mover` a cada partícula del segmento
+
+### Explicación paso a paso
+
+1. Se calcula la cantidad de elementos mediante `hasta` - `desde`
+2. `Array.tabulate` recorre los índices locales desde 0
+3. El índice original se obtiene sumando desde + i
+4. Se llama a `mover` para transformar cada partícula 
+5. Se devuelve un nuevo arreglo con los resultados
+
+### Seguimiento de la ejecución
+
+Ejecutamos:
+
+```Scala
+pasoSegmento(sistema, 2.0, 1, 3)
+```
+
+La función procesa las partículas de los índices 1 y 2
+
+| Índice local `i` | Índice original | Posición inicial | Velocidad | Nueva posición |
+|------------------|-----------------|------------------|-----------|----------------|
+| 0                | 1               | (4, 0)           | (0, 2)    | (4, 4)         |
+| 1                | 2               | (0, 6)           | (-1, 0)   | (-2, 6)        |
+
+
+Resultando:
+
+```Scala
+Array(
+  Particula(Vector2(4, 4), Vector2(0, 2), 1.0),
+  Particula(Vector2(-2, 6), Vector2(-1, 0), 3.0)
+)
+```
+
+### Estado de la pila de llamados
+
+`pasoSegmento` no usa recursión. `Array.tabulate` llama a `mover` para cada partícula del intervalo.
+Cada llamado a `mover` termina antes de procesar la siguiente partícula. Por lo tanto, no se acumulan llamadas
+recursivas en la pila
+
+## 1.3 `pasoSecuencial`
+
+### Definición del algoritmo
+
+```Scala
+def pasoSecuencial(s: Sistema, dt: Double): Sistema =
+  pasoSegmento(s, dt, 0, s.length)
+```
+
+Esta función usa `pasoSegmento` para recorrer el arreglo completo, desde el índice 0 hasta `s.length`, 
+sin incluir este último
+
+### Seguimiento de la ejecución 
+
+Ejecutamos:
+
+```Scala
+pasoSecuencial(sistema, 2.0)
+```
+
+| Partícula | Posición inicial | Velocidad | Cálculo              | Nueva posición |
+|-----------|------------------|-----------|----------------------|----------------|
+| 1         | (0, 0)           | (3, 4)    | (0, 0) + (3, 4) × 2  | (6, 8)         |
+| 2         | (4, 0)           | (0, 2)    | (4, 0) + (0, 2) × 2  | (4, 4)         |
+| 3         | (0, 6)           | (-1, 0)   | (0, 6) + (-1, 0) × 2 | (-2, 6)        |
+| 4         | (2, 2)           | (6, 8)    | (2, 2) + (6, 8) × 2  | (14, 18)       |
+
+El arreglo de posiciones resultante es:
+
+```Scala
+Array(
+  Vector2(6, 8),
+  Vector2(4, 4),
+  Vector2(-2, 6),
+  Vector2(14, 18)
+)
+```
+
+Estos valores representan únicamente las posiciones. Las partículas completas también conservan sus 
+velocidades y masas
+
+### Estado de la pila de llamados
+
+La ejecución sigue esta secuencia:
+
+```mermaid
+flowchart TD
+    A["pasoSecuencial(sistema, 2.0)"]
+    B["pasoSegmento(sistema, 2.0, 0, 4)"]
+    C["Array.tabulate(4)"]
+    D["mover para cada una de las 4 partículas"]
+    E["Arreglo actualizado"]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+```
+
+## 1.4 `pasoParalelo`
+
+### Definición del algoritmo
+
+```Scala
+def pasoParalelo(
+  s: Sistema,
+  dt: Double,
+  umbral: Int
+): Sistema = {
+  val tope = math.max(umbral, 1)
+
+  def aux(desde: Int, hasta: Int): Sistema =
+    if (hasta - desde <= tope) {
+      pasoSegmento(s, dt, desde, hasta)
+    } else {
+      val m = desde + (hasta - desde) / 2
+      val (izq, der) =
+        parallel(aux(desde, m), aux(m, hasta))
+      izq ++ der
+    }
+
+  aux(0, s.length)
+}
+```
+
+La función divide el arreglo en segmentos y permite procesarlos en paralelo mediante `parallel`
+
+### Explicación paso a paso
+
+#### Caso base
+
+Cuando el tamaño del segmento es menor o igual al tope, se llama directamente a `pasoSegmento`
+
+#### Caso recursivo
+
+Cuando el tamaño supera el tope, el segmento se divide en dos partes. Cada mitad se procesa mediante `aux` 
+y ambas se combinan usando `izq ++ der`.
+
+El umbral controla cuándo deja de dividir el sistema
+
+### Seguimiento de la ejecución
+
+Ejecutamos:
+
+```Scala
+pasoParalelo(sistema, 2.0, 2)
+```
+
+Como hay cuatro partículas y el tope es 2, el intervalo inicia [0, 4), se divide en dos segmentos
+
+```mermaid
+flowchart TD
+    A["[0,4)"]
+    B["[0,2)"]
+    C["[2,4)"]
+    D["pasoSegmento"]
+    E["pasoSegmento"]
+    F["(6,8)<br/>(4,4)"]
+    G["(-2,6)<br/>(14,18)"]
+    H["izq ++ der"]
+    I["Arreglo completo"]
+
+    A --> B
+    A --> C
+    B --> D
+    C --> E
+    D --> F
+    E --> G
+    F --> H
+    G --> H
+    H --> I
+```
+
+| Paso | Función      | Segmento         | Operación                | Resultado                      |
+|------|--------------|------------------|--------------------------|--------------------------------|
+| 1    | `aux(0,4)`   | `[0,4)`          | Divide en dos            | `[0,2)` y `[2,4)`              |
+| 2    | `aux(0,2)`   | `[0,2)`          | Procesa secuencialmente  | `(6,8)`, `(4,4)`               |
+| 3    | `aux(2,4)`   | `[2,4)`          | Procesa secuencialmente  | `(-2,6)`, `(14,18)`            |
+| 4    | `izq ++ der` | Sistema completo | Concatena los resultados | Cuatro posiciones actualizadas |
+
+Los pasos de las dos mitades pueden ejecutarse simultáneamente; no existe un orden fijo entre ellos
+
+### Estado de la pila de llamados
+
+A diferencia de las funciones con recursión de cola, `aux` utiliza recursión de árbol, porque debe esperar el 
+resultado de ambas mitades antes de realizar la concatenación
+
+| Rama      | Llamado      | Qué sucede                                           |
+|-----------|--------------|------------------------------------------------------|
+| Principal | `aux(0,4)`   | Crea dos trabajos paralelos y espera los resultados  |
+| Izquierda | `aux(0,2)`   | Ejecuta `pasoSegmento` y devuelve dos partículas     |
+| Derecha   | `aux(2,4)`   | Ejecuta `pasoSegmento` y devuelve dos partículas     |
+| Principal | `izq ++ der` | Combina ambos arreglos y devuelve el resultado final |
+
+Con este ejemplo, cada rama de `aux` alcanza máximo dos niveles de llamados de `aux`. La ejecución real puede 
+utilizar diferentes hilos para los trabajos paralelos
+
+### Diagrama de llamados
+
+```mermaid
+flowchart TD
+    A["pasoParalelo(sistema, 2.0, 2)"] --> B["aux(0,4)"]
+    B --> C["aux(0,2)"]
+    B --> D["aux(2,4)"]
+    C --> E["pasoSegmento: 2 partículas"]
+    D --> F["pasoSegmento: 2 partículas"]
+    E --> G["izq ++ der"]
+    F --> G
+    G --> H["Arreglo con 4 partículas"]
+```
+
+#### Ejemplo de uso punto 1
+
+```scala
+mover(sistema(0), 2.0).pos == Vector2(6, 8)
+pasoSegmento(sistema, 2.0, 1, 3).length == 2
+
+pasoSecuencial(sistema, 2.0)
+  .map(_.pos)
+  .sameElements(
+    Array(
+    Vector2(6, 8),
+    Vector2(4, 4),
+    Vector2(-2, 6),
+    Vector2(14, 18)
+    )
+  )
+
+pasoParalelo(sistema, 2.0, 2)
+  .sameElements(pasoSecuencial(sistema, 2.0))
+```
+
+Estas expresiones muestran los resultados esperados de las llamadas
+
+### Conclusión del punto 1
+
+Las funciones permiten actualizar las posiciones de las partículas conservando sus velocidades y masas. 
+`pasoSecuencial` procesa el sistema completo mediante un solo segmento, mientras que `pasoParalelo` divide el 
+trabajo en intervalos y combina los resultados.
+
+En el ejemplo utilizado, ambas versiones producen las mismas cuatro partículas actualizadas y mantienen su 
+orden original.
+
 
 # Punto 2. Magnitudes globales
 
@@ -262,6 +574,354 @@ Las tres funciones son recursiones de cola sobre el índice `i`, con un acumulad
 masa, y una pareja `(Vector2, Double)` para el centro de masa. La pila se mantiene en una activación. El centro de
 masa lleva la suma ponderada y la masa en una sola pasada y divide una vez al final, con el origen como respuesta
 cuando no hay masa.
+
+# Punto 3. Magnitudes globales en paralelo
+
+En este punto se implementan las funciones `energiaParalela` y `centroDeMasaParalelo`. Las dos funciones distribuyen 
+el procesamiento de las partículas mediante `parallel`. Cuando un segmento es suficientemente pequeño, utilizan 
+recursión de cola para recorrerlo de forma secuencial.
+
+Se utiliza el sistema de cuatro partículas presentado al principio del informe
+
+## 3.1 `energiaParalela`
+
+### Definición del algoritmo
+
+```Scala
+def energiaParalela(
+  s: Sistema,
+  umbral: Int
+): Double = {
+  val tope = math.max(umbral, 1)
+
+  @tailrec
+  def segmento(
+    i: Int,
+    hasta: Int,
+    acc: Double
+  ): Double =
+    if (i >= hasta) {
+      acc
+    } else {
+      val v = s(i).vel.norma
+      segmento(
+        i + 1,
+        hasta,
+        acc + 0.5 * s(i).masa * v * v
+      )
+    }
+
+  def aux(desde: Int, hasta: Int): Double =
+    if (hasta - desde <= tope) {
+      segmento(desde, hasta, 0.0)
+    } else {
+      val m = desde + (hasta - desde) / 2
+      val (izq, der) =
+        parallel(aux(desde, m), aux(m, hasta))
+      izq + der
+    }
+
+  aux(0, s.length)
+}
+```
+
+La función calcula la energía cinética de todas las partículas: $E = \sum_{i = 0}^{n-1}\frac12m_i|v_i|^2$
+
+### Explicación paso a paso
+
+La ejecución se divide en dos funciones internas. 
+
+- `Función segmento`: Recorre un intervalo, calcula la rapidez de cada partícula y acumula su energía 
+  cinética mediante recursión de cola
+- `Función aux`: Divide el intervalo mientras su tamaño supere el tope, ejecuta las mitades mediante `parallel` 
+  y suma las energías parciales
+
+### Seguimiento de la ejecución
+
+Ejecutamos:
+
+```Scala
+energiaParalela(sistema, 2)
+```
+
+El sistema contiene cuatro partículas. El tope es 2, por lo que se forman los segmentos [0, 2) y [2, 4). 
+
+Primero calculamos la energía de cada partícula:
+
+| Partícula | Masa | Velocidad | Rapidez | Energía |
+|-----------|------|-----------|---------|---------|
+| 1         | 2    | (3, 4)    | 5       | 25.0    |
+| 2         | 1    | (0, 2)    | 2       | 2.0     |
+| 3         | 3    | (-1, 0)   | 1       | 1.5     |
+| 4         | 2    | (6, 8)    | 10      | 100.0   |
+
+Segmento izquierdo [0, 2):
+
+| Llamada              | Energía agregada | Acumulador |
+|----------------------|------------------|------------|
+| `segmento(0,2,0.0)`  | 25.0             | 25.0       |
+| `segmento(1,2,25.0)` | 2.0              | 27.0       |
+| `segmento(2,2,27.0)` | Caso base        | 27.0       |
+
+Segmento derecho [2, 4):
+
+| Llamada               | Energía agregada | Acumulador |
+|-----------------------|------------------|------------|
+| `segmento(2,4,0.0)`   | 1.5              | 1.5        |
+| `segmento(3,4,1.5)`   | 100.0            | 101.5      |
+| `segmento(4,4,101.5)` | Caso base        | 101.5      |
+
+Al finalizar, `aux` suma los resultados parciales: 
+
+$E = 27 + 101.5 = 128.5$  
+
+Resultando:
+
+```Scala
+energiaParalela(sistema, 2) == 128.5
+```
+
+### Estado de la pila de llamados
+
+La función `aux` usa recursión de árbol, mientras que `segmento` utiliza recursión de cola.
+
+| Rama      | Llamado               | Resultado                         |
+|-----------|-----------------------|-----------------------------------|
+| Principal | `aux(0,4)`            | Espera las dos energías parciales |
+| Izquierda | `aux(0,2)`            | Ejecuta `segmento(0,2,0.0)`       |
+| Izquierda | `segmento(2,2,27.0)`  | Devuelve 27.0                     |
+| Derecha   | `aux(2,4)`            | Ejecuta `segmento(2,4,0.0)`       |
+| Derecha   | `segmento(4,4,101.5)` | Devuelve 101.5                    |
+| Principal | `izq + der`           | Devuelve 128.5                    |
+
+En `segmento`, la recursión de cola permite reutilizar la activación correspondiente durante el recorrido. 
+En `aux`, los llamados de las mitades deben completarse antes de realizar la suma final
+
+### Diagrama de llamados
+
+```mermaid
+flowchart TD
+    A["energiaParalela(sistema,2)"] --> B["aux(0,4)"]
+    B --> C["aux(0,2)"]
+    B --> D["aux(2,4)"]
+    C --> E["segmento: 25 + 2 = 27"]
+    D --> F["segmento: 1.5 + 100 = 101.5"]
+    E --> G["27 + 101.5"]
+    F --> G
+    G --> H["Energía total = 128.5"]
+```
+
+## 3.2 `centroDeMasaParalelo`
+
+### Definición del algoritmo
+
+```Scala
+def centroDeMasaParalelo(
+  s: Sistema,
+  umbral: Int
+): Vector2 = {
+  val tope = math.max(umbral, 1)
+
+  @tailrec
+  def segmento(
+    i: Int,
+    hasta: Int,
+    suma: Vector2,
+    masa: Double
+  ): (Vector2, Double) =
+    if (i >= hasta) {
+      (suma, masa)
+    } else {
+      segmento(
+        i + 1,
+        hasta,
+        suma + s(i).pos * s(i).masa,
+        masa + s(i).masa
+      )
+    }
+
+  def combinar(
+    a: (Vector2, Double),
+    b: (Vector2, Double)
+  ): (Vector2, Double) =
+    (a._1 + b._1, a._2 + b._2)
+
+  def aux(
+    desde: Int,
+    hasta: Int
+  ): (Vector2, Double) =
+    if (hasta - desde <= tope) {
+      segmento(
+        desde,
+        hasta,
+        Vector2(0.0, 0.0),
+        0.0
+      )
+    } else {
+      val m = desde + (hasta - desde) / 2
+      val (izq, der) =
+        parallel(aux(desde, m), aux(m, hasta))
+      combinar(izq, der)
+    }
+
+  val (suma, masa) = aux(0, s.length)
+
+  if (masa == 0.0) {
+    Vector2(0.0, 0.0)
+  } else {
+    Vector2(suma.x / masa, suma.y / masa)
+  }
+}
+```
+
+La función calcula el centro de masa del sistema mediante: $C=\frac{\sum m_i r_i}{\sum m_i}$ 
+
+Cuando la masa total es cero, devuelve Vector2(0.0, 0.0)
+
+### Explicación paso a paso
+
+La función usa tres operaciones internas
+
+- `Función segmento`: Recorre las partículas del intervalo y acumula dos valores: la suma de posiciones ponderadas 
+  por la masa y la masa total
+- `Función aux`: Divide los segmentos grandes y ejecuta las mitades en paralelo
+- `Función combinar`: Suma las posiciones ponderadas y las masas de ambas mitades
+
+Es importante no calcular ni promediar los centros de masa de las mitades por separado, porque las masas de esos 
+segmentos pueden ser diferentes 
+
+### Seguimiento de la ejecución
+
+Ejecutamos:
+
+```Scala
+centroDeMasaParalelo(sistema, 2)
+```
+
+Primero calculamos la contribución de cada partícula
+
+| Partícula | Posición | Masa | Posición × masa |
+|-----------|----------|------|-----------------|
+| 1         | (0, 0)   | 2    | (0, 0)          |
+| 2         | (4, 0)   | 1    | (4, 0)          |
+| 3         | (0, 6)   | 3    | (0, 18)         |
+| 4         | (2, 2)   | 2    | (4, 4)          |
+
+Segmento izquierdo [0, 2): 
+
+| Índice                 | Suma ponderada acumulada | Masa acumulada |
+|------------------------|--------------------------|----------------|
+| 0, antes de procesar   | (0, 0)                   | 0              |
+| 0, después de procesar | (0, 0)                   | 2              |
+| 1, después de procesar | (4, 0)                   | 3              |
+
+Resultado izquierdo: $A = ((4, 0), 3)$
+
+Segmento derecho [2, 4):
+
+| Índice                 | Suma ponderada acumulada | Masa acumulada |
+|------------------------|--------------------------|----------------|
+| 2, antes de procesar   | (0, 0)                   | 0              |
+| 2, después de procesar | (0, 18)                  | 3              |
+| 3, después de procesar | (4, 22)                  | 5              |
+
+Resultado derecho: $B = ((4, 22), 5)$
+
+### Combinación de los resultados
+
+La función combinar realiza:
+
+```Scala
+(a._1 + b._1, a._2 + b._2)
+```
+
+Suma las posiciones ponderadas: $R = (4, 0) + (4, 22) = (8, 22)$
+
+Y suma las masas $M = 3 + 5 = 8$. Por lo tanto, $C = \frac{(8, 22)}{8} = (1, 2.75)$
+
+Resultando:
+
+```Scala
+centroDeMasaParalelo(sistema, 2) ==
+    Vector2(1.0, 2.75)
+```
+
+El resultado considera la posición y la masa de cada partícula.
+
+### Estado de la pila de llamados
+
+`aux` usa recursión de árbol para dividir los segmentos, y `segmento` utiliza recursión de cola para 
+acumular los resultados
+
+| Rama      | Llamado                     | Resultado            |
+|-----------|-----------------------------|----------------------|
+| Principal | `aux(0,4)`                  | Divide el sistema    |
+| Izquierda | `aux(0,2)`                  | Acumula `((4,0),3)`  |
+| Derecha   | `aux(2,4)`                  | Acumula `((4,22),5)` |
+| Principal | `combinar(izq,der)`         | Obtiene `((8,22),8)` |
+| Final     | División de suma entre masa | Devuelve `(1,2.75)`  |
+
+La combinación se realiza después de que ambas ramas devuelven sus resultados. El orden de ejecución de las
+ramas no es fijo
+
+### Diagrama de llamados
+
+```mermaid
+flowchart TD
+  A["centroDeMasaParalelo(sistema,2)"] --> B["aux(0,4)"]
+  B --> C["aux(0,2)"]
+  B --> D["aux(2,4)"]
+  C --> E["Resultado: ((4,0),3)"]
+  D --> F["Resultado: ((4,22),5)"]
+  E --> G["combinar"]
+  F --> G
+  G --> H["Suma = (8,22); Masa = 8"]
+  H --> I["Centro de masa = (1,2.75)"]
+```
+
+### Ejemplo de uso del punto 3
+
+#### Ejemplo 1: Energía total
+
+```Scala
+energiaParalela(sistema, 2) == 128.5
+```
+
+La energía calculada en paralelo es igual a la suma de las energías de las cuatro partículas del ejemplo.
+
+#### Ejemplo 2: Centro de masa
+
+```Scala
+centroDeMasaParalelo(sistema, 2) ==
+  Vector2(1.0, 2.75)
+```
+
+El resultado considera la posición y la masa de cada partícula
+
+#### Ejemplo 3: Sistema vacío 
+
+```Scala
+energiaParalela(Array.empty[Particula], 2) == 0.0
+
+centroDeMasaParalelo(
+  Array.empty[Particula], 2
+) == Vector2(0.0, 0.0)
+```
+
+Al no existir partículas, la energía acumulada es cero. Como la masa total también es cero, el centro de masa
+se representa mediante el origen
+
+### Conclusión del punto 3
+
+Las funciones `energiaParalela` y `centroDeMasaParalelo` permiten calcular magnitudes globales distribuyendo el 
+procesamiento de las partículas en diferentes segmentos.
+
+La energía se obtiene sumando los resultados parciales. El centro de masa se calcula acumulando primero las 
+posiciones ponderadas y las masas, realizando la división una sola vez al finalizar
+
+En el sistema de ejemplo, los resultados esperados son una energía total de 128.5 y un centro de masa de (1.0, 2.75). 
+Estos valores coinciden con los cálculos secuenciales del punto 2, salvo posibles diferencias de redondeo en otros 
+sistemas
 
 # Punto 4. Trabajo y profundidad
 

@@ -85,6 +85,47 @@ class SimulacionParticulasTest extends AnyFunSuite {
     assert(pasoParalelo(Array(p), 1.0, 0).length == 1)
   }
 
+   // Pruebas adicionales de Valentina - Punto 1
+
+  test("mover: conserva la masa y la velocidad de la particula") {
+    val original = Particula(Vector2(2, 3), Vector2(4, 5), 7.0)
+    val resultado = mover(original, 2.0)
+
+    assert(resultado.masa == 7.0)
+    assert(resultado.vel == Vector2(4, 5))
+  }
+
+  test("mover: calcula correctamente ambas coordenadas") {
+    val original = Particula(Vector2(1, 2), Vector2(3, 4), 2.0)
+    val resultado = mover(original, 3.0)
+
+    assert(resultado.pos == Vector2(10, 14))
+  }
+
+  test("pasoSecuencial: mueve todas las particulas") {
+    val sistema = Array(
+      Particula(Vector2(0, 0), Vector2(1, 0), 1.0),
+      Particula(Vector2(2, 2), Vector2(0, 2), 1.0)
+    )
+
+    val resultado = pasoSecuencial(sistema, 2.0)
+
+    assert(resultado(0).pos == Vector2(2, 0))
+    assert(resultado(1).pos == Vector2(2, 6))
+  }
+
+  test("pasoSegmento: no modifica el arreglo original") {
+    val original = Array(p)
+    val resultado = pasoSegmento(original, 2.0, 0, 1)
+
+    assert(original(0).pos == Vector2(0, 0))
+    assert(resultado(0).pos == Vector2(2, 4))
+  }
+
+  test("pasoParalelo: funciona con un sistema vacio") {
+    assert(pasoParalelo(vacio, 1.0, 0).isEmpty)
+  }
+
   // Punto 2 -------------------------------------------------------------------
 
   test("energiaSecuencial: media masa por velocidad al cuadrado") {

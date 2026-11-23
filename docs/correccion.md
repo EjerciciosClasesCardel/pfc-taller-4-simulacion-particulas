@@ -1,279 +1,274 @@
-# Ejemplo de informe de corrección
+# Informe de corrección — Taller 4: simulación de partículas
 
-Fundamentos de Programación Funcional y Concurrente.
-Documento realizado por el docente Juan Francisco Díaz.
+## 0. Notación y especificación
 
-## 1. Argumentar la corrección de programas recursivos
+Sea $s = (p_0, p_1, \dots, p_{n-1})$ un sistema de $n \ge 0$ partículas, con $p_k = (r_k, v_k, m_k)$: posición,
+velocidad y masa. Sea $dt$ el paso de tiempo. Se define la partícula movida
 
-Sea $f : A \to B$ una función, y $A$ un conjunto definido recursivamente
-(recordar la definición de Matemáticas Discretas I), como por ejemplo los
-naturales o las listas.
+```math
+q_k \;=\; \mathrm{mover}(p_k, dt) \;=\; (\,r_k + v_k\,dt,\; v_k,\; m_k\,)
+```
 
-Sea $P_f$ un programa recursivo (lineal o en árbol) desarrollado en Scala (o en
-cualquier lenguaje de programación) hecho para calcular $f$:
+y, para $0 \le d \le h \le n$, la **lista de las partículas movidas del tramo $[d, h)$**, definida por recursión:
 
-```scala
-def Pf(a: A): B = { // Pf recibe a de tipo A, y devuelve f(a) de tipo B
-  ...
+```math
+T(d, h) \;=\;
+\begin{cases}
+[\,] & \text{si } d = h \\
+q_d \;::\; T(d+1, h) & \text{si } d < h
+\end{cases}
+```
+
+Es decir, $T(d,h) = [q_d, q_{d+1}, \dots, q_{h-1}]$. Con esto la especificación de cada función es:
+
+- $\mathrm{pasoSegmento}(s, dt, d, h) = T(d, h)$ para $0 \le d \le h \le n$.
+- $\mathrm{pasoSecuencial}(s, dt) = \mathrm{pasoParalelo}(s, dt, u) = T(0, n)$ para todo umbral $u$.
+- $\mathrm{energiaSecuencial}(s) = \sum_{k=0}^{n-1} \tfrac{1}{2}\, m_k \lVert v_k \rVert^2$.
+- $\mathrm{masaTotal}(s) = \sum_{k=0}^{n-1} m_k$.
+- $\mathrm{centroDeMasaSecuencial}(s) = \dfrac{\sum_k m_k\, r_k}{\sum_k m_k}$ si $\sum_k m_k \ne 0$, y el origen $(0,0)$ en caso contrario.
+
+> **Sobre el punto flotante.** Las demostraciones se hacen en los reales. En `Double`, cada suma se redondea, de modo que
+> el programa devuelve la suma hecha de izquierda a derecha con redondeo. Por ejemplo, la energía de un sistema de
+> ejemplo ejecutado da `23.250000000000004` y no 23.25. Por eso las pruebas comparan con tolerancia. Para
+> las funciones del punto 1 no se acumulan sumas entre partículas: cada partícula se calcula de forma independiente, y la
+> igualdad entre versiones es **exacta**.
+
+## 1. Corrección de `pasoSegmento` (recursión de cola)
+
+```Scala
+def pasoSegmento(s: Sistema, dt: Double, desde: Int, hasta: Int): Sistema = {
+  // Recorre de hasta - 1 hacia desde anteponiendo, así la lista queda en orden.
+  @tailrec
+  def aux(i: Int, acc: List[Particula]): List[Particula] =
+    if (i < desde) acc
+    else aux(i - 1, mover(s(i), dt) :: acc)
+
+  aux(hasta - 1, Nil).toArray
 }
 ```
 
-¿Cómo argumentar que $P_f(a)$ siempre devuelve $f(a)$ como respuesta? Es decir,
-¿cómo argumentar que $P_f$ es correcto con respecto a su especificación?
+La función se argumenta con el método de la invariante de ciclo, con **precondición** $0 \le d \le h \le n$.
 
-La respuesta es sencilla: demostrando el siguiente teorema.
+- **Estado:** $(i, acc)$.
+- **Estado inicial:** $s_0 = (h-1,\; [\,])$.
+- **Estado final:** cuando $i < d$.
+- **Transformación:** $\mathrm{transformar}(i, acc) = (i-1,\; q_i :: acc)$.
+- **Invariante:**
 
 ```math
-\forall a \in A : P_f(a) == f(a)
+\mathrm{Inv}(i, acc) \;\equiv\; d - 1 \le i \le h - 1 \;\wedge\; acc = T(i+1, h)
 ```
 
-Cuando uno tiene que demostrar que algo se cumple para todos los elementos de
-un conjunto definido recursivamente, es natural usar inducción estructural. En
-términos prácticos, esto significa demostrar que:
+**1.** $\mathrm{Inv}(s_0)$. Con $i = h-1$: $d-1 \le h-1 \le h-1$ se cumple porque $d \le h$, y $T(h, h) = [\,]$ = `Nil`, que es
+el valor inicial de $acc$.
 
-- Para cada valor básico $a$ de $A$, se tiene que $P_f(a) == f(a)$.
-- Para cada valor $a \in A$ construido recursivamente a partir de otro(s)
-  valor(es) $a' \in A$, se tiene que
-  $P_f(a') == f(a') \rightarrow P_f(a) == f(a)$. (Esta es la hipótesis de
-  inducción).
+**2.** La invariante se conserva. Sea $(i, acc)$ un estado no final con $\mathrm{Inv}$, es decir, $i \ge d$. Entonces
+$s(i)$ es un índice válido, porque $0 \le d \le i \le h-1 \le n-1$. El nuevo estado es $(i-1,\; q_i :: acc)$ y
 
-### Ejemplo: factorial recursivo
+```math
+q_i :: acc \;=\; q_i :: T(i+1, h) \;=\; T(i, h)
+```
 
-Sea $f : \mathbb{N} \to \mathbb{N}$ la función que calcula el factorial de un
-número natural, es decir, $f(n) = n!$. Y sea $P_f$ el siguiente programa en
-Scala:
+por la definición de $T$ (caso $i < h$). Además $d - 1 \le i - 1 \le h - 1$. Luego $\mathrm{Inv}(i-1, q_i :: acc)$.
 
-```scala
-def Pf(n: Int): Int = { // Pf recibe n de tipo Int, y devuelve n! de tipo Int
-  if (n == 0) 1 else n * Pf(n - 1)
+**3.** Estado final. Si $i < d$ y $\mathrm{Inv}$, entonces $i = d - 1$ y $acc = T(d, h)$. La función devuelve
+`acc.toArray`, que conserva el orden y la longitud, así que el resultado es $T(d, h)$ como arreglo.
+
+**4.** Terminación. En cada paso $i$ baja en 1, desde $h - 1$ hasta $d - 1$, así que hay exactamente $h - d$ pasos
+y siempre se llega al estado final.
+
+Concluimos $\mathrm{pasoSegmento}(s, dt, d, h) = T(d, h)$. El resultado tiene $h - d$ partículas, con índices
+$d, \dots, h-1$, cada una **una sola vez** y en orden. Si $h < d$ (fuera de la especificación), el estado inicial ya es final y
+devuelve el arreglo vacío.
+
+## 2. Corrección de `pasoSecuencial`
+
+```Scala
+def pasoSecuencial(s: Sistema, dt: Double): Sistema =
+  pasoSegmento(s, dt, 0, s.length)
+```
+
+Es `pasoSegmento` con $d = 0$ y $h = n$, que cumplen la precondición. Por la sección 1,
+$\mathrm{pasoSecuencial}(s, dt) = T(0, n)$: cada partícula movida $dt$ con su velocidad, y velocidad y masa intactas
+por la definición de $q_k$. Para $n = 0$, $T(0,0) = [\,]$ y el resultado es vacío.
+
+## 3. Partir el sistema no pierde ni repite partículas
+
+**Lema de partición.** Para $0 \le d \le m \le h \le n$:
+
+```math
+T(d, h) \;=\; T(d, m) \;{+}{+}\; T(m, h)
+```
+
+*Demostración*, por inducción sobre $m - d$.
+
+- **Base**, $m = d$: $T(d, d) \,{+}{+}\, T(d, h) = [\,] \,{+}{+}\, T(d, h) = T(d, h)$.
+- **Paso**, $m > d$ (y por tanto $d < h$): por la definición de $T$ y la hipótesis de inducción sobre $T(d+1, h)$,
+
+```math
+T(d,h) = q_d :: T(d+1,h) = q_d :: \bigl(T(d+1,m) \,{+}{+}\, T(m,h)\bigr) = \bigl(q_d :: T(d+1,m)\bigr) \,{+}{+}\, T(m,h) = T(d,m) \,{+}{+}\, T(m,h)
+```
+
+$\blacksquare$
+
+Lo que dice el lema en términos de índices: $[d, h) = [d, m) \,\cup\, [m, h)$ y $[d, m) \cap [m, h) = \varnothing$, de modo que
+ningún índice queda fuera ni aparece en las dos mitades, y los tamaños suman: $(m - d) + (h - m) = h - d$.
+
+**Asociatividad.** La concatenación de listas (y de arreglos) es asociativa y tiene como neutro la lista vacía:
+
+```math
+(a \,{+}{+}\, b) \,{+}{+}\, c \;=\; a \,{+}{+}\, (b \,{+}{+}\, c), \qquad [\,] \,{+}{+}\, a = a \,{+}{+}\, [\,] = a
+```
+
+Por eso da igual cómo se agrupe la unión de los tramos en el árbol de llamados: cualquier agrupación entrega la misma lista.
+(La concatenación no es conmutativa, así que lo que se respeta es el **orden** izquierda-derecha de las llamadas, y `pasoParalelo` usa
+`izq ++ der` en ese orden.)
+
+## 4. Corrección de `pasoParalelo` y su igualdad con la secuencial
+
+```Scala
+def pasoParalelo(s: Sistema, dt: Double, umbral: Int): Sistema = {
+  def aux(desde: Int, hasta: Int): Sistema =
+    if (hasta - desde <= umbral || hasta - desde <= 1)
+      pasoSegmento(s, dt, desde, hasta)
+    else {
+      val m = desde + (hasta - desde) / 2
+      val (izq, der) = parallel(aux(desde, m), aux(m, hasta))
+      izq ++ der
+    }
+
+  aux(0, s.length)
 }
 ```
 
-Vamos a demostrar que $\forall n \in \mathbb{N} : P_f(n) == n!$
+Sea $\mathrm{aux}(d, h)$ la función interna. **Afirmación:** para todo umbral $u$ y todo $0 \le d \le h \le n$,
+$\mathrm{aux}(d, h) = T(d, h)$.
 
-**Caso base:** $n = 0$
+*Demostración*, por inducción fuerte sobre el tamaño $h - d$. Se supone la afirmación para todo tramo de menor tamaño.
 
-```math
-P_f(0) \rightarrow \text{if } (0 == 0)\ 1 \text{ else } 0 \ast P_f(-1) \rightarrow 1
-```
+- **Caso hoja:** $h - d \le u$ o $h - d \le 1$. La función devuelve `pasoSegmento(s, dt, d, h)`, que por la
+  sección 1 es $T(d, h)$.
+- **Caso partición:** $h - d > u$ y $h - d \ge 2$. Con $m = d + \lfloor (h - d)/2 \rfloor$ se tiene
+  $d < m < h$, porque $\lfloor (h-d)/2 \rfloor \ge 1$ y $\lfloor (h-d)/2 \rfloor < h - d$. Entonces $m - d < h - d$ y
+  $h - m < h - d$: los dos tramos son **estrictamente menores**, y se aplica la hipótesis de inducción a cada uno:
+  $\mathrm{aux}(d,m) = T(d,m)$ y $\mathrm{aux}(m,h) = T(m,h)$. El valor de $\mathrm{parallel}(a, b)$ es el par
+  $(a, b)$ de los valores de sus dos argumentos; lo que cambia es **cuándo y dónde** se evalúan, no su valor.
+  El resultado es `izq ++ der` $= T(d,m) \,{+}{+}\, T(m,h) = T(d,h)$ por el lema de partición. $\blacksquare$
 
-Por otro lado, $f(0) = 0! = 1$. Entonces $P_f(0) == f(0)$.
-
-**Caso de inducción:** $n = k + 1$, $k \geq 0$. Hay que demostrar:
-$P_f(k) == f(k) \rightarrow P_f(k + 1) == f(k + 1)$
-
-```math
-P_f(k+1) \rightarrow \text{if } (k+1 == 0)\ 1 \text{ else } (k+1) \ast P_f(k) \rightarrow (k+1) \ast P_f(k)
-```
-
-Usando la hipótesis de inducción (HI):
+**Teorema.** Para todo sistema $s$, todo $dt$ y todo umbral $u$ (incluso $u \le 0$ o $u \ge n$):
 
 ```math
-\rightarrow (k+1) \ast k! = (k+1)!
+\mathrm{pasoParalelo}(s, dt, u) \;=\; \mathrm{aux}(0, n) \;=\; T(0, n) \;=\; \mathrm{pasoSecuencial}(s, dt)
 ```
 
-Por lo tanto, $P_f(k + 1) == f(k + 1)$.
+La igualdad es **exacta** (no solo con tolerancia), porque cada posición se calcula con la misma operación
+$r_k + v_k\,dt$ y esa operación no se reordena. Las pruebas la verifican con `sameElements`.
 
-Concluimos por inducción que $\forall n \in \mathbb{N} : P_f(n) == n!$
+**Terminación y papel de la guarda `hasta - desde <= 1`.** En cada partición los dos tramos son más pequeños y
+no vacíos ($m - d \ge 1$ y $h - m \ge 1$), así que el tamaño decrece hasta llegar al caso hoja.
+La guarda es **necesaria**: sin ella, con la condición `hasta - desde <= umbral` sola y $u = 0$, un tramo de
+tamaño 1 cumple $1 > 0$, se parte con $m = d + 0 = d$ y su segunda mitad es $[d, h)$, **el mismo tramo**. Esto es un
+contraejemplo de terminación: con una sola partícula y $u = 0$, `aux(0, 1)` se llamaría a sí misma sin fin.
+Se comprobó ejecutando ese caso exacto (una partícula, umbral 0) con la variante sin la guarda: no terminó en 15 segundos
+y agotó los hilos del sistema, mientras que la versión entregada devuelve el resultado correcto al instante y pasa la prueba
+`con umbral cero no se queda sin fondo`.
 
-### Ejemplo: el máximo de una lista
+**Ausencia de interferencia.** Las dos ramas de `parallel` solo **leen** el arreglo `s`, que nunca se modifica, y
+cada una construye listas y arreglos nuevos. No hay escritura compartida, así que el resultado no depende del orden en que terminen.
 
-Sea $f : \text{List}[\mathbb{N}] \to \mathbb{N}$ la función que calcula el
-máximo de una lista de enteros positivos, no vacía. Y sea $P_f$ el siguiente
-programa en Scala:
+## 5. Corrección del punto 2 (recursión de cola)
 
-```scala
-def maxLin(l: List[Int]): Int = {
-  if (l.tail.isEmpty) l.head
-  else math.max(maxLin(l.tail), l.head)
+En las tres funciones el estado contiene el índice $i$, que crece de a uno desde $0$ hasta $n$. El estado final es
+$i \ge n$. Como $i$ aumenta en 1 en cada paso, **terminan** tras $n$ pasos.
+
+### 5.1 `energiaSecuencial`
+
+```Scala
+def energiaSecuencial(s: Sistema): Double = {
+  @tailrec
+  def aux(i: Int, acc: Double): Double =
+    if (i >= s.length) acc
+    else {
+      val v = s(i).vel.norma
+      aux(i + 1, acc + 0.5 * s(i).masa * v * v)
+    }
+
+  aux(0, 0.0)
 }
 ```
 
-Demostraremos que:
+Sea $e_k = \tfrac{1}{2}\, m_k \lVert v_k \rVert^2$ y el estado $(i, acc)$, con $s_0 = (0, 0.0)$ e invariante:
 
 ```math
-\forall n \in \mathbb{N} \setminus \{0\} : P_f(\text{List}(a_1, a_2, \ldots, a_n)) == f(\text{List}(a_1, a_2, \ldots, a_n))
+\mathrm{Inv}(i, acc) \;\equiv\; 0 \le i \le n \;\wedge\; acc = \sum_{k=0}^{i-1} e_k
 ```
 
-**Caso base:** $n = 1$
+**1.** $\mathrm{Inv}(0, 0.0)$: la suma vacía vale 0. **2.** Si $i < n$ e $\mathrm{Inv}(i, acc)$, el nuevo estado es
+$(i+1,\; acc + e_i)$ y $acc + e_i = \sum_{k=0}^{i} e_k$. **3.** En el estado final $i = n$, por lo que
+$acc = \sum_{k=0}^{n-1} e_k$. **4.** Terminación: $i$ llega a $n$ en $n$ pasos. En el sistema vacío, $n = 0$ y devuelve $0.0$.
 
-```math
-P_f(\text{List}(a_1)) \rightarrow \text{if } \text{List}(a_1).\text{tail.isEmpty then } \text{List}(a_1).\text{head else } \ldots \rightarrow \text{List}(a_1).\text{head} \rightarrow a_1
-```
+### 5.2 `masaTotal`
 
-Por otro lado, $f(\text{List}(a_1)) = a_1$. Entonces
-$P_f(\text{List}(a_1)) == f(\text{List}(a_1))$.
+```Scala
+def masaTotal(s: Sistema): Double = {
+  @tailrec
+  def aux(i: Int, acc: Double): Double =
+    if (i >= s.length) acc
+    else aux(i + 1, acc + s(i).masa)
 
-**Caso de inducción:** $n = k + 1$, $k \geq 1$. Se debe demostrar:
-
-```math
-P_f(\text{List}(b_1, b_2, \ldots, b_k)) == f(\text{List}(b_1, b_2, \ldots, b_k)) \rightarrow P_f(\text{List}(a_1, a_2, \ldots, a_{k+1})) == f(\text{List}(a_1, a_2, \ldots, a_{k+1}))
-```
-
-Empecemos por calcular qué devuelve $P_f$ usando el modelo de sustitución:
-
-```math
-P_f(L) \rightarrow \text{if } L.\text{tail.isEmpty then } L.\text{head else math.max}(P_f(L.\text{tail}), L.\text{head})
-```
-
-```math
-\rightarrow \text{math.max}(P_f(\text{List}(a_2, \ldots, a_{k+1})), a_1)
-```
-
-Sea $b = P_f(\text{List}(a_2, \ldots, a_{k+1}))$; por la hipótesis de
-inducción, $b = f(\text{List}(a_2, \ldots, a_{k+1}))$. Hay dos posibilidades:
-
-- Si $\text{math.max}(b, a_1) = b$, entonces $b \geq a_1$ y
- $b == f(\text{List}(a_1, a_2, \ldots, a_{k+1}))$.
-- Si $\text{math.max}(b, a_1) = a_1$, entonces $a_1 \geq b$ y
- $a_1 == f(\text{List}(a_1, a_2, \ldots, a_{k+1}))$.
-
-Por lo tanto, $P_f(L) == f(L)$.
-
-Concluimos por inducción que:
-
-```math
-\forall n \in \mathbb{N} \setminus \{0\} : P_f(\text{List}(a_1, a_2, \ldots, a_n)) == f(\text{List}(a_1, a_2, \ldots, a_n))
-```
-
-## 2. Argumentar la corrección de programas iterativos
-
-Para argumentar la corrección de programas iterativos, se debe formalizar cómo
-es la iteración. Esto implica definir:
-
-- Cómo se representa un estado de la iteración, $s$.
-- Cuál es el estado inicial, $s_0$.
-- Cuál es el estado final (o cómo se reconoce que un estado es final): $s_f$.
-- Qué condición (o predicado) cumple todo estado: $\text{Inv}(s)$ (invariante
-  de la iteración).
-- El mecanismo para pasar de un estado al siguiente: $\text{transformar}(s)$.
-  Si $s_i$ es el estado $i$, entonces $\text{transformar}(s_i) = s_{i+1}$.
-
-Un programa iterativo tiene la siguiente forma:
-
-```scala
-def Pf(a: A): B = { // Pf recibe a de tipo A, y devuelve f(a) de tipo B
-  def Pf_iter(s: Estado): B =
-    if (esFinal(s)) respuesta(s) else Pf_iter(transformar(s))
-  Pf_iter(s0)
+  aux(0, 0.0)
 }
 ```
 
-Demostración de corrección:
+Igual con $acc = \sum_{k<i} m_k$: el estado inicial es $(0, 0.0)$, cada paso suma $m_i$ y en $i = n$ devuelve $\sum_{k=0}^{n-1} m_k$.
 
-- $\text{Inv}(s_0)$: el estado inicial cumple la condición invariante.
-- Si $(s_i \neq s_f \land \text{Inv}(s_i)) \rightarrow \text{Inv}(\text{transformar}(s_i))$:
-  el nuevo estado cumple la condición invariante si el estado anterior la
-  cumplía.
-- De lo anterior se concluye $\text{Inv}(s_f)$, es decir, el estado final
-  cumple la condición invariante. Luego,
-  $\text{Inv}(s_f) \rightarrow \text{respuesta}(s_f) == f(a)$.
-- Finalmente, demostrar que siempre se llega al estado final $s_f$. Esto
-  implica que
-  $P_f(a) == \text{iter}(s_0) == \text{respuesta}(s_f) == f(a)$.
+### 5.3 `centroDeMasaSecuencial`
 
-### Ejemplo: factorial iterativo
+```Scala
+def centroDeMasaSecuencial(s: Sistema): Vector2 = {
+  @tailrec
+  def aux(i: Int, ponderada: Vector2, masa: Double): (Vector2, Double) =
+    if (i >= s.length) (ponderada, masa)
+    else aux(i + 1, ponderada + s(i).pos * s(i).masa, masa + s(i).masa)
 
-Considere el siguiente programa iterativo en Scala para calcular la función
-factorial:
-
-```scala
-def Pf(n: Int): Int = { // Pf recibe n de tipo Int, y devuelve n! de tipo Int
-  def Pf_iter(i: Int, n: Int, ac: Int): Int =
-    if (i > n) ac else Pf_iter(i + 1, n, i * ac)
-  Pf_iter(1, n, 1)
+  val (ponderada, masa) = aux(0, Vector2(0, 0), 0.0)
+  if (masa == 0.0) Vector2(0, 0)
+  else Vector2(ponderada.x / masa, ponderada.y / masa)
 }
 ```
 
-Este programa implementa el siguiente proceso iterativo:
-
-- Un estado $s = (i, n, ac)$.
-- El estado inicial es $s_0 = (1, n, 1)$.
-- $(i, n, ac)$ es final si $i > n$, o lo que es lo mismo, si $i = n + 1$.
-- La invariante de ciclo es
-  $\text{Inv}(i, n, ac) \equiv i \leq n + 1 \land ac = (i-1)!$.
-  La invariante de ciclo es una relación que SIEMPRE se cumple en el ciclo.
-- $\text{transformar}((i, n, ac)) = (i+1, n, i \ast ac)$.
-
-Ahora, demostramos los puntos mencionados:
-
-**1.** $\text{Inv}(s_0)$: el estado inicial cumple la condición invariante.
+Estado $(i, w, M)$, con $w$ un vector y $M$ un número, y estado inicial $(0, (0,0), 0.0)$. Invariante:
 
 ```math
-s_0 = (1, n, 1) \implies 1 \leq n + 1 \land 1 = 0!
+\mathrm{Inv}(i, w, M) \;\equiv\; 0 \le i \le n \;\wedge\; w = \sum_{k=0}^{i-1} m_k\, r_k \;\wedge\; M = \sum_{k=0}^{i-1} m_k
 ```
 
-**2.** La invariante se mantiene con la transformación de estados,
-$(s_i \neq s_f \land \text{Inv}(s_i)) \rightarrow \text{Inv}(\text{transformar}(s_i))$:
-
-1. Primer cambio, $i = i + 1$, lo que implica $ac = ((i+1) - 1)! = i!$.
-2. Segundo cambio, $ac = i \ast ac$, entonces $ac = (i - 1)! \ast i = i!$.
-3. Como se puede ver en ambos cambios indicados en la transformación, la
-   invariante se mantiene.
-
-**3.** $\text{Inv}(s_f) \rightarrow \text{respuesta}(s_f) == f(a)$
+**1.** El estado inicial cumple la invariante con sumas vacías. **2.** Cada paso produce
+$(i+1,\; w + m_i r_i,\; M + m_i)$, que extiende ambas sumas con el término $i$. **3.** En $i = n$, $w = \sum_k m_k r_k$ y
+$M = \sum_k m_k$. La función termina con:
 
 ```math
-(n + 1 \leq n + 1) \land ac = ((n+1)-1)! \rightarrow ac == n!
+\text{resultado} \;=\;
+\begin{cases}
+(0, 0) & \text{si } M = 0 \\[4pt]
+\left(\dfrac{w_x}{M},\; \dfrac{w_y}{M}\right) & \text{si } M \ne 0
+\end{cases}
 ```
 
-**4.** En cada paso, la componente $i$ del estado incrementa, acercándose a $n+1$.
-Después de $n$ iteraciones, se alcanza $n+1$.
+que es la especificación. La **división se hace una sola vez, al final**, sobre las sumas completas, y la rama
+$M = 0$ (sistema vacío o todas las masas en cero) evita dividir $0/0$. **4.** Terminación: $n$ pasos.
 
-Esto implica que $P_f(n) == \text{iter}(1, n, 1) == n!$
+*Comprobación independiente con valores ejecutados:* para el sistema de ejemplo del informe de proceso, la
+ejecución dio $w = (9, 16)$ y $M = 12$, y la división da $(0.75,\; 1.3333\ldots)$, igual que el cálculo hecho
+aparte en Python.
 
-### Ejemplo: el máximo de una lista
+## 6. Qué cubre este informe y qué falta
 
-Se desea calcular el máximo de una lista de enteros positivos, no vacía. Sea
-$f : \text{List}[\mathbb{N}] \to \mathbb{N}$ la función que calcula ese valor.
-Y sea $P_f$ el siguiente programa en Scala:
+Los puntos pedidos por el enunciado para el punto 1 quedan así: que **partir el sistema no pierde ni repite
+partículas** (sección 3 y caso partición de la sección 4), que la operación con que se combinan los parciales
+(**concatenación**) **es asociativa** (sección 3) y que la versión paralela da lo mismo que la secuencial (sección 4).
 
-```scala
-def maxIt(l: List[Int]): Int = {
-  def maxAux(max: Int, l: List[Int]): Int = {
-    if (l.isEmpty) max
-    else maxAux(math.max(max, l.head), l.tail)
-  }
-  maxAux(l.head, l.tail)
-}
-```
-
-Este programa implementa el siguiente proceso iterativo:
-
-- Un estado $s = (max, l)$ donde $l = \text{List}(a_i, a_{i+1}, \ldots, a_k)$
-  es una cola de $L$.
-- El estado inicial es
-  $s_0 = (L.\text{head}, L.\text{tail}) = (a_1, \text{List}(a_2, \ldots, a_k))$.
-- $s = (max, l)$ es final si $l$ es vacía.
-- $\text{Inv}(max, l) \equiv l = \text{List}(a_i, a_{i+1}, \ldots, a_k) \land max = f(\text{List}(a_1, a_2, \ldots, a_{i-1}))$.
-- $\text{transformar}((max, l)) = (nmax, l.\text{tail})$ donde $nmax = max$ si
-  $max \geq l.\text{head}$, y $nmax = l.\text{head}$ si no.
-
-Demostración de los puntos:
-
-**1.** $\text{Inv}(s_0)$: el estado inicial cumple la condición invariante.
-
-```math
-s_0 = (a_1, \text{List}(a_2, \ldots, a_k)) \implies a_1 = f(\text{List}(a_1))
-```
-
-**2.** $(s_i \neq s_f \land \text{Inv}(s_i)) \rightarrow \text{Inv}(\text{transformar}(s_i))$
-
-```math
-\neg\, l.\text{isEmpty} \land l = \text{List}(a_i, a_{i+1}, \ldots, a_k) \land max = f(\text{List}(a_1, a_2, \ldots, a_{i-1}))
-```
-
-```math
-\rightarrow l.\text{tail} = \text{List}(a_{i+1}, \ldots, a_k) \land nmax = f(\text{List}(a_1, \ldots, a_i))
-```
-
-**3.** $\text{Inv}(s_f) \rightarrow \text{respuesta}(s_f) == f(a)$
-
-```math
-\text{Inv}((max, \text{List}())) \rightarrow max = f(\text{List}(a_1, \ldots, a_k))
-```
-
-**4.** En cada paso, la lista $l$ se reduce, acercándose a ser vacía. Después de
-$k$ iteraciones, $l = \text{List}()$.
-
-Esto implica que $P_f(L) == \text{maxAux}(L.\text{head}, L.\text{tail}) == f(L)$
+> **Pendiente, a cargo de los demás integrantes del grupo:** corrección de `energiaParalela` y `centroDeMasaParalelo`
+> (punto 3), incluida la explicación pedida de por qué la suma es válida para repartir y el promedio no lo es
+> directamente, y de las funciones de los puntos 4 y 5. La asociatividad de la suma en `Double` es solo aproximada
+> por el redondeo, y debe tratarse allí.

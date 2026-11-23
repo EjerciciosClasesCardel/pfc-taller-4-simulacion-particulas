@@ -15,7 +15,7 @@ parte de la entrega: si falta alguno, la entrega se sanciona con el 20 % de
 la nota.
 
 | Nombre completo | Código |
-|---|---|
+|Valentina Cifuentes Badillo |202611030 |
 | Santiago Vásquez Valencia | 202611028 |
 | | |
 | | |

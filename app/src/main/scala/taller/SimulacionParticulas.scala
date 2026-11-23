@@ -18,19 +18,38 @@ class SimulacionParticulas {
   // Punto 1: un paso de la simulación -----------------------------------------
 
   /** La posición nueva es la anterior más la velocidad por dt. */
-  def mover(p: Particula, dt: Double): Particula = ???
+  def mover(p: Particula, dt: Double): Particula = {
+    val nuevaPos = p.pos + (p.vel * dt)
+    Particula(nuevaPos, p.vel, p.masa)
+  }
 
   /** Avanza todo el sistema un paso de tiempo dt. */
-  def pasoSecuencial(s: Sistema, dt: Double): Sistema = ???
+  def pasoSecuencial(s: Sistema, dt: Double): Sistema = {
+    pasoSegmento(s, dt, 0, s.length)
+  }
 
   /** Avanza solo el tramo entre `desde` incluido y `hasta` excluido. */
-  def pasoSegmento(s: Sistema, dt: Double, desde: Int, hasta: Int): Sistema = ???
+  def pasoSegmento(s: Sistema, dt: Double, desde: Int, hasta: Int): Sistema = {
+    s.slice(desde, hasta).map(p => mover(p, dt))
+  }
 
   /**
    * Parte el sistema por la mitad con `parallel` mientras el tramo tenga más
    * elementos que el umbral, y por debajo de esa cifra resuelve en secuencial.
    */
-  def pasoParalelo(s: Sistema, dt: Double, umbral: Int): Sistema = ???
+  def pasoParalelo(s: Sistema, dt: Double, umbral: Int): Sistema = {
+    if (s.length <= umbral || s.length <= 1) {
+      pasoSecuencial(s, dt)
+    } else {
+      val mitad = s.length / 2
+      
+      val (izq, der) = parallel(
+        pasoParalelo(s.slice(0, mitad), dt, umbral),
+        pasoParalelo(s.slice(mitad, s.length), dt, umbral)
+      )
+      izq ++ der
+    }
+  }
 
   // Punto 2: magnitudes globales ----------------------------------------------
 
@@ -60,13 +79,34 @@ class SimulacionParticulas {
   // Punto 4: trabajo y profundidad --------------------------------------------
 
   /** El número total de operaciones, una por partícula. */
-  def trabajo(n: Int): Int = ???
+  def trabajo(n: Int): Int = {
+    require(n >= 0, s"n debe ser positivo")
+    n
+  }
 
   /** Cuántas veces se parte a la mitad, más el tramo que queda sin partir. */
-  def profundidad(n: Int, umbral: Int): Int = ???
+  def profundidad(n: Int, umbral: Int): Int = {
+    require(n >= 0, "n debe ser positivo")
+    require(umbral >= 1, "umbral debe ser al menos 1")
+
+    def calculo(tamaño: Int): Int = {
+      if (tamaño <= umbral) {
+        tamaño
+      } else {
+        val mitad = tamaño / 2
+        val otraMitad = tamaño - mitad
+        1 + math.max(calculo(mitad), calculo(otraMitad))
+      }
+    }
+    calculo(n)
+  }
 
   /** La profundidad más el trabajo entre p procesadores. */
-  def tiempoEstimado(n: Int, p: Int, umbral: Int): Double = ???
+  def tiempoEstimado(n: Int, p: Int, umbral: Int): Double = {
+    require(p >= 1, "Debe existir al menos un procesador")
+
+    profundidad(n, umbral).toDouble + trabajo(n).toDouble / p
+  }
 
   // Punto 5: medir la aceleración ---------------------------------------------
 
@@ -79,11 +119,19 @@ class SimulacionParticulas {
   }
 
   /** El cociente entre el tiempo secuencial y el paralelo. */
-  def aceleracion(tSecuencial: Double, tParalelo: Double): Double = ???
+  def aceleracion(tSecuencial: Double, tParalelo: Double): Double = {
+    tSecuencial / tParalelo
+  }
 
   /**
    * El umbral que menos tarda de una lista de candidatos. Con la lista vacía,
    * el tamaño del sistema, que equivale a no repartir.
    */
-  def umbralConveniente(s: Sistema, dt: Double, umbrales: List[Int]): Int = ???
+  def umbralConveniente(s: Sistema, dt: Double, umbrales: List[Int]): Int = {
+    if (umbrales.isEmpty) {
+      s.length
+    } else {
+      umbrales.map(umbral => (umbral, medir(5) {pasoParalelo(s, dt, umbral)})).minBy(_._2)._1
+    }
+  }
 }

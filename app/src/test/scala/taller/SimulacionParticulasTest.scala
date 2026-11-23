@@ -85,6 +85,47 @@ class SimulacionParticulasTest extends AnyFunSuite {
     assert(pasoParalelo(Array(p), 1.0, 0).length == 1)
   }
 
+   // Pruebas adicionales de Valentina - Punto 1
+
+  test("mover: conserva la masa y la velocidad de la particula") {
+    val original = Particula(Vector2(2, 3), Vector2(4, 5), 7.0)
+    val resultado = mover(original, 2.0)
+
+    assert(resultado.masa == 7.0)
+    assert(resultado.vel == Vector2(4, 5))
+  }
+
+  test("mover: calcula correctamente ambas coordenadas") {
+    val original = Particula(Vector2(1, 2), Vector2(3, 4), 2.0)
+    val resultado = mover(original, 3.0)
+
+    assert(resultado.pos == Vector2(10, 14))
+  }
+
+  test("pasoSecuencial: mueve todas las particulas") {
+    val sistema = Array(
+      Particula(Vector2(0, 0), Vector2(1, 0), 1.0),
+      Particula(Vector2(2, 2), Vector2(0, 2), 1.0)
+    )
+
+    val resultado = pasoSecuencial(sistema, 2.0)
+
+    assert(resultado(0).pos == Vector2(2, 0))
+    assert(resultado(1).pos == Vector2(2, 6))
+  }
+
+  test("pasoSegmento: no modifica el arreglo original") {
+    val original = Array(p)
+    val resultado = pasoSegmento(original, 2.0, 0, 1)
+
+    assert(original(0).pos == Vector2(0, 0))
+    assert(resultado(0).pos == Vector2(2, 4))
+  }
+
+  test("pasoParalelo: funciona con un sistema vacio") {
+    assert(pasoParalelo(vacio, 1.0, 0).isEmpty)
+  }
+
   // Punto 2 -------------------------------------------------------------------
 
   test("energiaSecuencial: media masa por velocidad al cuadrado") {
@@ -207,4 +248,70 @@ class SimulacionParticulasTest extends AnyFunSuite {
     val candidatos = List(16, 128, 1024)
     assert(candidatos.contains(umbralConveniente(grande, 0.5, candidatos)))
   }
+
+  // Aqui empiezan los test nuevos ----------------------------------------------
+
+  // Test adicional Punto 4 ---------------------------------------------------------------
+  test("trabajo: maneja correctamente sistemas vacíos y unitarios") {
+    assert(trabajo(0) == 0)
+    assert(trabajo(1) == 1)
+  }
+
+  test("profundidad: maneja correctamente tamaños mínimos") {
+    assert(profundidad(0, 1) == 0)
+    assert(profundidad(1, 1) == 1)
+    assert(profundidad(1, 10) == 1)
+  }
+
+  test("profundidad: divide correctamente segmentos de tamaño impar") {
+    assert(profundidad(5, 2) == 4)
+    assert(profundidad(9, 4) == 5)
+    assert(profundidad(1000, 1) == 11)
+  }
+
+  test("profundidad: no divide cuando el umbral supera el tamaño") {
+    assert(profundidad(5, 10) == 5)
+    assert(profundidad(100, 200) == 100)
+  }
+
+  test("tiempoEstimado: disminuye al aumentar los procesadores") {
+    val conUno = tiempoEstimado(1024, 1, 1)
+    val conCuatro = tiempoEstimado(1024, 4, 1)
+    val conOcho = tiempoEstimado(1024, 8, 1)
+
+    assert(cerca(conUno, 1035.0))
+    assert(cerca(conCuatro, 267.0))
+    assert(cerca(conOcho, 139.0))
+
+    assert(conUno > conCuatro)
+    assert(conCuatro > conOcho)
+  }
+
+  // Punto 5 -------------------------------------------------------------------
+
+  test("aceleracion: calcula correctamente el cociente de tiempos") {
+    assert(cerca(aceleracion(100.0, 25.0), 4.0))
+    assert(cerca(aceleracion(100.0, 100.0), 1.0))
+  }
+
+  test("aceleracion: identifica cuando la versión paralela es más lenta") {
+    assert(cerca(aceleracion(50.0, 100.0), 0.5))
+  }
+
+  test("umbralConveniente: devuelve el tamaño del sistema si no hay candidatos") {
+    assert(umbralConveniente(s, 1.0, Nil) == s.length)
+  }
+
+  test("umbralConveniente: devuelve el único umbral disponible") {
+    assert(umbralConveniente(s, 1.0, List(1)) == 1)
+  }
+
+  test("umbralConveniente: selecciona un umbral de la lista de candidatos") {
+    val candidatos = List(1, 2, 4, 8, 16)
+
+    val resultado = umbralConveniente(s, 1.0, candidatos)
+
+    assert(candidatos.contains(resultado))
+  }
+
 }

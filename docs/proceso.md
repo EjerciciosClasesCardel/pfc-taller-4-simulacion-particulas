@@ -1277,7 +1277,7 @@ flowchart TD
 ## 5.3 La medición en `App.scala`
 
 `App.scala` arma la tabla del informe de paralelización. Para cada tamaño de sistema hace estos pasos:
-1. Define los tamaños `1000000`, `1500000` y `2000000`, el paso de tiempo `dt = 0.01` y las repeticiones (`5`).
+1. Define los tamaños `500000`, `1000000` y `2000000`, el paso de tiempo `dt = 0.01` y las repeticiones (`5`).
 2. `crear(n)` construye un sistema de `n` partículas con `Array.tabulate`, sin azar: el mismo `n` da siempre el mismo sistema.
 3. Para cada tamaño prepara los umbrales `n`, `n/2`, `n/8`, `n/64`, `n/512`.
 4. Mide `pasoSecuencial` con `medir(5)`: cada una de las cinco repeticiones calienta primero con ScalaMeter, sin tomar el tiempo, para que la máquina virtual optimice el código, y `medir` devuelve la mediana en milisegundos.

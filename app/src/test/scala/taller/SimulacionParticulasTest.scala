@@ -85,6 +85,34 @@ class SimulacionParticulasTest extends AnyFunSuite {
     assert(pasoParalelo(Array(p), 1.0, 0).length == 1)
   }
 
+  val tres: Sistema = Array(
+    Particula(Vector2(1, 1), Vector2(-1, 2), 1.5),
+    Particula(Vector2(-2, 0), Vector2(0.5, 0.5), 4.0),
+    Particula(Vector2(3, -3), Vector2(2, -2), 0.5))
+
+  test("mover: con dt negativo la particula retrocede"){
+    assert(mover(tres(0), -2.0).pos == Vector2(3.0, -3.0))
+  }
+
+  test("pasoSecuencial: cada partícula usa su propia velocidad") {
+    val despues = pasoSecuencial(tres, 2.0)
+    assert(despues.map(_.pos).toList ==
+      List(Vector2(-1.0, 5.0), Vector2(-1.0, 1.0), Vector2(7.0, -7.0)))
+  }
+
+  test("pasoSegmento: un tramo del medio respeta los índices") {
+    val tramo = pasoSegmento(tres, 1.0, 1, 3)
+    assert(tramo.map(_.pos).toList == List(Vector2(-1.5, 0.5), Vector2(5.0, -5.0)))
+  }
+
+  test("pasoParalelo: con umbral igual al tamaño coincide con el secuencial"){
+    assert(pasoParalelo(tres, 0.5, tres.length).toList == pasoSecuencial(tres, 0.5).toList)
+  }
+
+  test("pasoParalelo: con umbral negativo y sistema impar conserva orden y tamaño"){
+    assert(pasoParalelo(tres, 1.0, -4).toList == pasoSecuencial(tres, 1.0).toList)
+  }
+
   // Punto 2 -------------------------------------------------------------------
 
   test("energiaSecuencial: media masa por velocidad al cuadrado") {

@@ -18,19 +18,33 @@ class SimulacionParticulas {
   // Punto 1: un paso de la simulación -----------------------------------------
 
   /** La posición nueva es la anterior más la velocidad por dt. */
-  def mover(p: Particula, dt: Double): Particula = ???
+  def mover(p: Particula, dt: Double): Particula =
+    p.copy(pos = p.pos + p.vel * dt)
 
   /** Avanza todo el sistema un paso de tiempo dt. */
-  def pasoSecuencial(s: Sistema, dt: Double): Sistema = ???
+  def pasoSecuencial(s: Sistema, dt: Double): Sistema =
+    pasoSegmento(s, dt, 0, s.length)
 
   /** Avanza solo el tramo entre `desde` incluido y `hasta` excluido. */
-  def pasoSegmento(s: Sistema, dt: Double, desde: Int, hasta: Int): Sistema = ???
+  def pasoSegmento(s: Sistema, dt: Double, desde: Int, hasta: Int): Sistema =
+    (for (i <- desde until hasta)yield mover(s(i), dt)).toArray
 
   /**
    * Parte el sistema por la mitad con `parallel` mientras el tramo tenga más
    * elementos que el umbral, y por debajo de esa cifra resuelve en secuencial.
    */
-  def pasoParalelo(s: Sistema, dt: Double, umbral: Int): Sistema = ???
+  def pasoParalelo(s: Sistema, dt: Double, umbral: Int): Sistema = {
+    val piso = Math.max(umbral, 1)
+
+    def paso(desde: Int, hasta: Int): Sistema=
+      if (hasta - desde <= piso) pasoSegmento(s, dt, desde, hasta)
+      else{
+        val mitad = desde + (hasta -desde) /2
+        val (izquierda, derecha)= parallel(paso(desde, mitad), paso(mitad, hasta))
+        izquierda ++ derecha
+      }
+    paso(0, s.length)
+  }
 
   // Punto 2: magnitudes globales ----------------------------------------------
 

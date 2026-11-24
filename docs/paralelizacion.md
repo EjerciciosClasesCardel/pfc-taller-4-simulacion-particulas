@@ -575,3 +575,38 @@ Misma máquina, JVM y método de la sección 1.12 (10 repeticiones, 3 corridas, 
 | 4.000.000 | 500.000 | 18,08 | 5,51 | 3,28 | 3,18 a 3,34 |
 | 4.000.000 | 62.500 | 18,47 | 5,17 | **3,54** | 3,51 a 3,65 |
 | 4.000.000 | 7.812 | 18,16 | 5,41 | 3,44 | 3,36 a 3,57 |
+
+# Punto 5: Medir la aceleración 
+
+## 5.1 La aceleración 
+
+`aceleracion` es el cociente entre el tiempo secuencial y el paralelo, ambos en milisegundos:
+```Scala
+def aceleracion(tSecuencial: Double, tParalelo: Double): Double =
+  tSecuencial / tParalelo
+```
+Mayor que 1 quiere decir que repartir ganó tiempo; igual a 1, que tardaron lo mismo; menor que 1, que repartir costó más de lo que ahorró. Es la función que `App.scala` usa para llenar la columna de aceleración de la tabla de la sección 1.12. Por ejemplo, con 4.000.000 de partículas y umbral 500.000, `aceleracion(30.45, 9.96)` da `3.06`. 
+
+## 5.2 Cómo elige el umbral `umbralConveniente`
+
+`umbralConveniente` recibe una lista de umbrales candidatos, mide `pasoParalelo` con cada uno, una sola vez y con `medir(5)`, y devuelve el que tardó menos. Las mediciones se hacen una tras otra y no en paralelo, a propósito: si se midieran a la vez, cada una le quitaría núcleos a las demás y los tiempos dejarían de ser comparables.
+
+Si la lista está vacía devuelve el tamaño del sistema, porque un umbral igual a `n` no parte nada y equivale a no repartir.
+
+## 5.3 Qué umbral habría elegido
+
+Con los tiempos de MacBook Air M5 (sección 1.12), el umbral de menor tiempo paralelo en cada tamaño es:
+
+| Partículas     | Umbral de menor tiempo  | Paralelo (ms) | Secuencial (ms)| Aceleración |
+|----------------|------------|-------------------|-------------------|-------------------|
+| 1.000.000       | 125.000   | 2,43             | 6,83              | 2,83 |
+| 2.000.000      | 31.250  | 5,99              | 16,85              | 2,75 |
+| 4.000.000       | 500.000  | 9,96              | 30,45              | 3,06 |
+
+Con 1.000.000 y 4.000.000 de partículas el umbral elegido es `n/8`; con 2.000.000 es `n/64`, y su tiempo (5,99 ms) casi empata con el de `n/8` (6,03 ms). En ningún tamaño gana el umbral más pequeño (`n/512`) ni el igual a `n`: con umbrales muy pequeños se crean demasiadas tareas y con uno igual a `n` no se reparte nada, y la fila de control de aceleración da 1,00; 0,99 y 1,00, como se espera.
+
+`umbralConveniente` compara los tiempos de `pasoParalelo` entre sí, no la aceleración. Por eso con 2.000.000 de partículas elige `n/64`, aunque la mayor aceleración de la tabla está en `n/8` (2,79): el secuencial se mide aparte en cada fila y esas diferencias caen dentro de la variación entre corridas. Además, la elección puede cambiar de una ejecución a otra, porque `umbralConveniente` mide cada candidato una sola vez. Su resultado vale para la máquina y el momento en que se mide. 
+
+## 5.4 Conclusión punto 5
+
+`aceleracion` resume en un número si repartir ganó tiempo, y `umbralConveniente` elige entre varios umbrales el que menos tardó en una medición concreta. Con los datos de la sección 1.12, repartir ayudó en los tres tamaños, con aceleraciones entre 2,75 y 3,06 en el umbral elegido, y el umbral conveniente no es ni el más pequeño ni el que no reparte.

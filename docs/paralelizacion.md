@@ -240,6 +240,55 @@ La división recursiva con `parallel` conserva las partículas y su orden. Las m
 500.000 y 1.000.000 de partículas, pero no con 2.000.000. La concatenación de arreglos y los costos de ejecución 
 limitan la aceleración, por lo que no se puede establecer un umbral óptimo para todos los casos 
 
+## 1.12 Mediciones en el MacBook Air M5 (pendiente de interpretar)
+
+Estas tablas se midieron en un equipo distinto al de las secciones 1.4 a 1.11 y todavía no tienen lectura: esas secciones se actualizan a partir de ellas.
+
+- **Máquina:** MacBook Air con chip M5 y 16 GB de memoria. La JVM ve 10 núcleos (`availableProcessors`): 4 de rendimiento y 6 de eficiencia.
+- **JVM:** Java 17 con `-Xms8g -Xmx8g -XX:+AlwaysPreTouch -XX:+UseParallelGC`.
+- **Medición:** `App.scala` con ScalaMeter, 10 repeticiones por caso (mediana) y 3 corridas completas; cada cifra es la mediana de las tres. `dt = 0.01`; umbrales `n`, `n/2`, `n/8`, `n/64` y `n/512` (división entera); tiempos en milisegundos. El secuencial se mide justo antes de cada umbral, después de un calentamiento que se descarta.
+
+Para reproducirlas:
+
+```bash
+./gradlew installDist
+JAVA_OPTS="-Xms8g -Xmx8g -XX:+AlwaysPreTouch -XX:+UseParallelGC" app/build/install/app/bin/app 10
+```
+
+La primera fila de cada tamaño (umbral = n) es la fila de control: no reparte nada. La aceleración es la mediana de las aceleraciones de las tres corridas, el rango es la menor y la mayor, y la estimada es `trabajo(n) / tiempoEstimado(n, 10, umbral)` del punto 4. En negrita está la mayor aceleración de cada tamaño.
+
+### Movimiento (`pasoSecuencial` y `pasoParalelo`)
+
+| Partículas | Umbral | Secuencial (ms) | Paralelo (ms) | Aceleración | Rango (3 corridas) | Estimada |
+|-----------:|-------:|----------------:|--------------:|------------:|-------------------:|---------:|
+| 1.000.000 | 1.000.000 | 6,76 | 6,77 | 1,00 | 1,00 a 1,01 | 0,91 |
+| 1.000.000 | 500.000 | 6,86 | 3,86 | 1,78 | 1,74 a 1,80 | 1,67 |
+| 1.000.000 | 125.000 | 6,83 | 2,43 | **2,83** | 2,79 a 2,83 | 4,44 |
+| 1.000.000 | 15.625 | 6,86 | 2,56 | 2,66 | 2,56 a 2,73 | 8,65 |
+| 1.000.000 | 1.953 | 6,86 | 2,72 | 2,55 | 2,46 a 2,58 | 9,81 |
+| 2.000.000 | 2.000.000 | 16,86 | 17,01 | 0,99 | 0,98 a 1,00 | 0,91 |
+| 2.000.000 | 1.000.000 | 16,81 | 10,15 | 1,70 | 1,66 a 1,78 | 1,67 |
+| 2.000.000 | 250.000 | 16,80 | 6,03 | **2,79** | 2,75 a 2,79 | 4,44 |
+| 2.000.000 | 31.250 | 16,85 | 5,99 | 2,75 | 2,71 a 2,81 | 8,65 |
+| 2.000.000 | 3.906 | 16,89 | 6,31 | 2,65 | 2,63 a 2,68 | 9,81 |
+| 4.000.000 | 4.000.000 | 30,53 | 30,60 | 1,00 | 0,99 a 1,03 | 0,91 |
+| 4.000.000 | 2.000.000 | 31,21 | 18,12 | 1,74 | 1,71 a 1,76 | 1,67 |
+| 4.000.000 | 500.000 | 30,45 | 9,96 | **3,06** | 3,00 a 3,12 | 4,44 |
+| 4.000.000 | 62.500 | 30,42 | 10,48 | 2,90 | 1,85 a 2,99 | 8,65 |
+| 4.000.000 | 7.812 | 30,52 | 12,01 | 2,62 | 1,47 a 2,71 | 9,81 |
+
+### Variación con el número de procesadores
+
+Se repitió la medición con 2.000.000 de partículas y umbral 250.000 (`n/8`), en una sola corrida, limitando con `-XX:ActiveProcessorCount=N` los procesadores que ve la JVM. Eso dimensiona el pool de `parallel` en N hilos; no fija los hilos a núcleos físicos.
+
+| N (pool de la JVM) | Secuencial (ms) | Paralelo (ms) | Aceleración | Estimada |
+|-------------------:|----------------:|--------------:|------------:|---------:|
+| 1 | 11,77 | 10,97 | 1,07 | 0,89 |
+| 2 | 11,76 | 6,66 | 1,77 | 1,60 |
+| 4 | 13,51 | 5,61 | 2,41 | 2,67 |
+| 8 | 13,95 | 4,62 | 3,02 | 4,00 |
+| 10 | 14,36 | 4,64 | 3,09 | 4,44 |
+
 # Punto 3: Magnitudes globales en paralelo
 
 ## 3.1 El cálculo de la energía cinética
@@ -482,3 +531,47 @@ también depende de los costos de ejecución, la memoria y las condiciones de la
 Las funciones de energía cinética y centro de masa utilizan `parallel` para procesar segmentos independientes y 
 combinar sus resultados correctamente. Las mediciones mostraron mejoras de rendimiento, aunque estas varían según 
 el tamaño del sistema, el umbral y las condiciones de ejecución
+
+## 3.14 Mediciones en el MacBook Air M5 (pendiente de interpretar)
+
+Misma máquina, JVM y método de la sección 1.12 (10 repeticiones, 3 corridas, mediana de las tres). Para cada umbral se midieron, una detrás de otra, `energiaSecuencial`, `energiaParalela`, `centroDeMasaSecuencial` y `centroDeMasaParalelo` sobre el mismo sistema. La primera fila de cada tamaño (umbral = n) es la fila de control. En negrita está la mayor aceleración de cada tamaño.
+
+### Energía cinética
+
+| Partículas | Umbral | Secuencial (ms) | Paralelo (ms) | Aceleración | Rango (3 corridas) |
+|-----------:|-------:|----------------:|--------------:|------------:|-------------------:|
+| 1.000.000 | 1.000.000 | 1,26 | 1,26 | 0,99 | 0,98 a 1,00 |
+| 1.000.000 | 500.000 | 2,56 | 1,99 | 1,29 | 1,27 a 1,30 |
+| 1.000.000 | 125.000 | 2,57 | 1,19 | 2,16 | 2,07 a 2,22 |
+| 1.000.000 | 15.625 | 2,56 | 1,14 | **2,24** | 2,23 a 2,28 |
+| 1.000.000 | 1.953 | 2,54 | 1,16 | 2,21 | 2,14 a 2,23 |
+| 2.000.000 | 2.000.000 | 2,61 | 2,60 | 1,00 | 1,00 a 1,00 |
+| 2.000.000 | 1.000.000 | 3,60 | 2,55 | 1,41 | 1,40 a 1,47 |
+| 2.000.000 | 250.000 | 4,74 | 2,14 | 2,21 | 2,03 a 2,51 |
+| 2.000.000 | 31.250 | 4,73 | 1,92 | **2,47** | 2,15 a 2,75 |
+| 2.000.000 | 3.906 | 4,74 | 1,93 | 2,45 | 2,20 a 2,76 |
+| 4.000.000 | 4.000.000 | 4,97 | 4,91 | 1,01 | 1,00 a 1,03 |
+| 4.000.000 | 2.000.000 | 8,62 | 5,47 | 1,56 | 1,55 a 1,59 |
+| 4.000.000 | 500.000 | 8,68 | 3,45 | 2,51 | 2,44 a 2,56 |
+| 4.000.000 | 62.500 | 8,68 | 3,15 | 2,76 | 2,69 a 2,81 |
+| 4.000.000 | 7.812 | 8,71 | 3,14 | **2,79** | 2,69 a 2,81 |
+
+### Centro de masa
+
+| Partículas | Umbral | Secuencial (ms) | Paralelo (ms) | Aceleración | Rango (3 corridas) |
+|-----------:|-------:|----------------:|--------------:|------------:|-------------------:|
+| 1.000.000 | 1.000.000 | 5,10 | 5,04 | 1,00 | 0,68 a 1,03 |
+| 1.000.000 | 500.000 | 5,07 | 2,99 | 1,68 | 1,68 a 1,76 |
+| 1.000.000 | 125.000 | 5,09 | 1,71 | 2,98 | 2,92 a 3,19 |
+| 1.000.000 | 15.625 | 5,02 | 1,63 | **3,13** | 3,05 a 3,15 |
+| 1.000.000 | 1.953 | 5,08 | 1,63 | 3,12 | 3,11 a 3,30 |
+| 2.000.000 | 2.000.000 | 7,53 | 7,34 | 1,03 | 0,82 a 1,03 |
+| 2.000.000 | 1.000.000 | 9,66 | 5,54 | 1,74 | 1,63 a 1,86 |
+| 2.000.000 | 250.000 | 9,61 | 3,12 | 3,08 | 2,70 a 3,31 |
+| 2.000.000 | 31.250 | 9,75 | 2,87 | **3,40** | 2,88 a 3,56 |
+| 2.000.000 | 3.906 | 9,75 | 2,87 | **3,40** | 2,95 a 3,59 |
+| 4.000.000 | 4.000.000 | 17,63 | 16,95 | 1,04 | 1,04 a 1,05 |
+| 4.000.000 | 2.000.000 | 18,13 | 9,76 | 1,87 | 1,86 a 1,92 |
+| 4.000.000 | 500.000 | 18,08 | 5,51 | 3,28 | 3,18 a 3,34 |
+| 4.000.000 | 62.500 | 18,47 | 5,17 | **3,54** | 3,51 a 3,65 |
+| 4.000.000 | 7.812 | 18,16 | 5,41 | 3,44 | 3,36 a 3,57 |

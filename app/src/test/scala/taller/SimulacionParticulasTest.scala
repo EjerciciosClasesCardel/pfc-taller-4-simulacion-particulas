@@ -216,6 +216,27 @@ class SimulacionParticulasTest extends AnyFunSuite {
     val casos = for (n <- List(1, 7, 64, 1024); u <- List(1, 8, 64)) yield (n, u)
     assert(casos.forall { case (n, u) => profundidad(n, u) <= trabajo(n) })
   }
+  // Pruebas Propias - P4
+
+  test("profundidad [+]: 2 particiones y lo que queda"){
+    assert(profundidad(512,128) == 130)
+  }
+  
+  test("profundidad [+]: Umbral = 1 en n = 8 da 4"){
+    assert(profundidad(8,1) == 4)
+  }
+
+  test("profundidad [+]: Falla con un umbral menor a 1"){
+    assertThrows[IllegalArgumentException](profundidad(8, -1))
+  }
+
+  test("profundidad [+]: Falla con un n negativo"){
+    assertThrows[IllegalArgumentException](profundidad(-1, 2))
+  }
+
+  test("tiempoEstimado [+]: El tiempo con 6 procesadores es menor al de 3 procesadores"){
+    assert(tiempoEstimado(512,6,4) < tiempoEstimado(512,3,4))
+  }
 
   // Punto 5 -------------------------------------------------------------------
 

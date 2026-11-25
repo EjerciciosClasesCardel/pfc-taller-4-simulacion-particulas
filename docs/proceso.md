@@ -1,131 +1,128 @@
-# Algoritmo Factorial con Recursión de Cola
+## Punto 4: Trabajo y profundidad
 
-## Definición del Algoritmo
+### Definición del algoritmo - `trabajo`
 
-```Scala
-def factorial(n: Int): BigInt = {
-  @annotation.tailrec
-  def loop(x: Int, acumulador: BigInt): BigInt = {
-    if (x <= 1) acumulador
-    else loop(x - 1, acumulador * x)
+```scala
+def trabajo(n: Int): Int = n
+```
+
+La función `trabajo` recibe un entero `n` y devuelve el mismo valor. Representa el número total de operaciones, considerando una operación por partícula.
+
+Recibe un parámetro:
+
+- n: Número de partículas u operaciones.
+
+### Definición del algoritmo - `profundidad`
+
+```scala
+def profundidad(n: Int, umbral: Int): Int = {
+  require(n >= 0, "El # de operaciones no puede ser negativo.")
+  require(umbral > 0, "El umbral debe ser minimo 1.")
+
+  val piso = math.max(umbral, 1)
+
+  def aux(n: Int): Int = {
+    if (n <= piso) n
+    else {
+      val mitad = n / 2
+      math.max(aux(mitad), aux(n - mitad)) + 1
+    }
   }
-  loop(n, 1)
+
+  aux(n)
 }
 ```
 
-* La función `factorial` calcula el factorial de un número `n` utilizando **recursión de cola**.
-* La función interna `loop` es la que hace la recursión:
+La función `profundidad` recibe el número de operaciones `n` y un `umbral`. Divide el problema en dos partes hasta que cada parte tenga un tamaño menor o igual al umbral. Devuelve la profundidad máxima de las divisiones, incluyendo el tramo final que queda sin dividir.
 
-  * Recibe dos parámetros:
+Recibe dos parámetros:
 
-    * `x`: el valor actual decreciente hasta llegar a 1.
-    * `acumulador`: donde se guarda el resultado parcial en cada paso.
-* El decorador `@annotation.tailrec` obliga a que la función sea optimizada como recursión de cola, es decir, **no se acumulan llamados en la pila**.
+- n: Número de operaciones que se deben procesar.
 
-## Explicación paso a paso
+- umbral: Tamaño máximo permitido para dejar de dividir.
 
-### Caso base
+### Definición del algoritmo - `tiempoEstimado`
 
-```Scala
-if (x <= 1) acumulador
+```scala
+def tiempoEstimado(n: Int, p: Int, umbral: Int): Double = {
+  require(p > 0, "El # de procesadores debe ser mayor a 0.")
+  profundidad(n, umbral) + (trabajo(n)/p)
+}
 ```
 
-Cuando `x` llega a `1`, la función retorna directamente el valor acumulado, evitando más llamadas.
+La función tiempoEstimado recibe el número de operaciones `n`, la cantidad de procesadores `p` y un `umbral`. Devuelve una estimación del tiempo mediante la suma de la profundidad y el trabajo dividido entre los procesadores.
 
-### Caso recursivo
+Recibe tres parámetros:
 
-```Scala
-loop(x - 1, acumulador * x)
-```
+- `n`: Número de operaciones.
 
-En cada llamada:
+- `p`: Cantidad de procesadores disponibles.
 
-* Se reduce el valor de `x` en 1.
-* Se multiplica el acumulador por `x` y se pasa a la siguiente iteración.
-* Como es recursión de cola, la llamada recursiva es la **última instrucción** en ejecutarse, lo que permite a Scala optimizar la pila.
+- `umbral`: Tamaño máximo de cada tramo antes de dejar de dividir.
 
----
+### Explicación paso a paso
 
-## Llamados de pila en recursión de cola
+#### `profundidad( )`
 
-Ejemplo:
+- Se comprueba que n sea mayor o igual a cero y que umbral sea mayor que cero mediante require.
 
-```Scala
-factorial(5)
-```
+- Se calcula piso con math.max(umbral, 1). Como el umbral ya debe ser positivo, piso tendrá el mismo valor que umbral.
 
-### Paso 1: Llamada inicial
+- Se llama a aux(n) para iniciar el cálculo.
 
-```Scala
-loop(5, 1)
-```
+- Si n <= piso, se devuelve n, porque el tramo ya no necesita dividirse.
 
-### Paso 2: Primera iteración
+- Si n > piso, se calcula mitad = n / 2.
 
-```Scala
-loop(4, 5)   // acumulador = 1 * 5
-```
+- Se realizan dos llamadas recursivas:
 
-### Paso 3: Segunda iteración
+  - aux(mitad): procesa la primera mitad.
 
-```Scala
-loop(3, 20)  // acumulador = 5 * 4
-```
+  - aux(n - mitad): procesa la segunda mitad.
 
-### Paso 4: Tercera iteración
+- Se toma el mayor resultado de ambas llamadas y se suma uno para contar la división actual.
 
-```Scala
-loop(2, 60)  // acumulador = 20 * 3
-```
+#### `tiempoEstimado( )`
+- Se comprueba que `p` sea mayor que cero mediante require.
 
-### Paso 5: Cuarta iteración
+- Se llama a `profundidad(n, umbral)` para calcular la profundidad del proceso.
 
-```Scala
-loop(1, 120) // acumulador = 60 * 2
-```
+- Se llama a `trabajo(n)` para obtener el número total de operaciones.
 
-### Paso 6: Caso base
+- Se divide el `trabajo` entre `p`.
 
-```Scala
-return 120
-```
+- Se suman ambos resultados y se devuelve el valor como Double.
 
----
+Importante: Como `trabajo(n)` y `p` son de tipo Int, la división `trabajo(n)/p` es una división entera. Por lo tanto, se descarta la parte decimal antes de sumarla a la profundidad.
 
-## Diferencia con recursión normal
-
-* En **recursión normal** cada llamada queda en la pila esperando a que termine la siguiente, lo que puede causar desbordamiento si `n` es muy grande.
-* En **recursión de cola**, el compilador transforma el proceso en un **bucle optimizado**, por lo que no se guarda cada llamada en la pila y el algoritmo puede ejecutarse para valores muy grandes sin problema.
-
----
-
-## Ejemplo de uso
-
-```Scala
-val resultado = factorial(5)
-println(resultado)  // 120
-```
-
-El resultado de `factorial(5)` es `120`.
-
-
-## Diagrama de llamados de pila con recursión de cola
+### Diagrama de llamados
 
 ```mermaid
 sequenceDiagram
-    participant Main as factorial(5)
-    participant L1 as loop(5, 1)
-    participant L2 as loop(4, 5)
-    participant L3 as loop(3, 20)
-    participant L4 as loop(2, 60)
-    participant L5 as loop(1, 120)
+    participant M as Main
+    participant T as tiempoEstimado
+    participant P as profundidad
+    participant A as aux
+    participant W as trabajo
 
-    Main->>L1: llamada inicial
-    L1->>L2: tail call con (4, 5)
-    L2->>L3: tail call con (3, 20)
-    L3->>L4: tail call con (2, 60)
-    L4->>L5: tail call con (1, 120)
-    L5-->>Main: return 120
+    M->>T: tiempoEstimado(n, p, umbral)
+    T->>P: profundidad(n, umbral)
+    P->>A: aux(n)
+
+    loop Mientras n > piso
+        A->>A: Calcular mitad = n / 2
+        A->>A: aux(mitad)
+        A->>A: aux(n - mitad)
+        A->>A: Obtener máximo + 1
+    end
+
+    A-->>P: Profundidad calculada
+    P-->>T: Resultado de profundidad
+
+    T->>W: trabajo(n)
+    W-->>T: n
+
+    T->>T: Calcular trabajo(n) / p
+    T->>T: Sumar profundidad y trabajo dividido
+    T-->>M: Double
 ```
-
-

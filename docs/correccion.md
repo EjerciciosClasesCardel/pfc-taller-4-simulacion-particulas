@@ -1,279 +1,129 @@
-# Ejemplo de informe de corrección
+## Punto 4: Trabajo y profundidad
 
-Fundamentos de Programación Funcional y Concurrente.
-Documento realizado por el docente Juan Francisco Díaz.
+### `trabajo( )`
 
-## 1. Argumentar la corrección de programas recursivos
+La función devuelve el mismo número de operaciones que recibe.
 
-Sea $f : A \to B$ una función, y $A$ un conjunto definido recursivamente
-(recordar la definición de Matemáticas Discretas I), como por ejemplo los
-naturales o las listas.
+#### Especificación:
 
-Sea $P_f$ un programa recursivo (lineal o en árbol) desarrollado en Scala (o en
-cualquier lenguaje de programación) hecho para calcular $f$:
+Para cualquier entero n:
 
-```scala
-def Pf(a: A): B = { // Pf recibe a de tipo A, y devuelve f(a) de tipo B
-  ...
-}
-```
+$$
+trabajo(n) = n
+$$
 
-¿Cómo argumentar que $P_f(a)$ siempre devuelve $f(a)$ como respuesta? Es decir,
-¿cómo argumentar que $P_f$ es correcto con respecto a su especificación?
+#### Demostración.
 
-La respuesta es sencilla: demostrando el siguiente teorema.
+La función no realiza transformaciones sobre el valor recibido. Simplemente devuelve n.
 
-```math
-\forall a \in A : P_f(a) == f(a)
-```
+Por lo tanto, el resultado coincide con el número total de operaciones definido en la especificación.
 
-Cuando uno tiene que demostrar que algo se cumple para todos los elementos de
-un conjunto definido recursivamente, es natural usar inducción estructural. En
-términos prácticos, esto significa demostrar que:
+### `profundidad( )`
 
-- Para cada valor básico $a$ de $A$, se tiene que $P_f(a) == f(a)$.
-- Para cada valor $a \in A$ construido recursivamente a partir de otro(s)
-  valor(es) $a' \in A$, se tiene que
-  $P_f(a') == f(a') \rightarrow P_f(a) == f(a)$. (Esta es la hipótesis de
-  inducción).
+La función calcula la profundidad de las divisiones, sumando uno por cada nivel de división y considerando el tamaño del tramo cuando se alcanza el umbral.
 
-### Ejemplo: factorial recursivo
+#### Especificación.
 
-Sea $f : \mathbb{N} \to \mathbb{N}$ la función que calcula el factorial de un
-número natural, es decir, $f(n) = n!$. Y sea $P_f$ el siguiente programa en
-Scala:
+Sea $D(n,u)$ la profundidad calculada para n operaciones y un umbral u:
 
-```scala
-def Pf(n: Int): Int = { // Pf recibe n de tipo Int, y devuelve n! de tipo Int
-  if (n == 0) 1 else n * Pf(n - 1)
-}
-```
+$$
+D(n,u) =
+\begin{cases}
+n & \text{si } n \leq u \
+1 + \max(D(\lfloor n/2 \rfloor,u),\
+\qquad D(\lceil n/2 \rceil,u))
+& \text{si } n > u
+\end{cases}
+$$
 
-Vamos a demostrar que $\forall n \in \mathbb{N} : P_f(n) == n!$
+Esta definición corresponde a la división entera realizada por n / 2 y a la segunda parte n - mitad.
 
-**Caso base:** $n = 0$
+#### Demostración por inducción sobre n.
 
-```math
-P_f(0) \rightarrow \text{if } (0 == 0)\ 1 \text{ else } 0 \ast P_f(-1) \rightarrow 1
-```
+**Caso base**: $n \leq u$.
 
-Por otro lado, $f(0) = 0! = 1$. Entonces $P_f(0) == f(0)$.
+La función ejecuta if (n <= piso) y devuelve n.
 
-**Caso de inducción:** $n = k + 1$, $k \geq 0$. Hay que demostrar:
-$P_f(k) == f(k) \rightarrow P_f(k + 1) == f(k + 1)$
+Como umbral es positivo, piso es igual a umbral. Por lo tanto, el resultado coincide con la especificación:
 
-```math
-P_f(k+1) \rightarrow \text{if } (k+1 == 0)\ 1 \text{ else } (k+1) \ast P_f(k) \rightarrow (k+1) \ast P_f(k)
-```
+$$
+D(n,u) = n
+$$
 
-Usando la hipótesis de inducción (HI):
+#### Hipótesis de inducción (HI):
 
-```math
-\rightarrow (k+1) \ast k! = (k+1)!
-```
+Suponemos que aux calcula correctamente la profundidad para cualquier valor menor que n.
 
-Por lo tanto, $P_f(k + 1) == f(k + 1)$.
+**Paso inductivo**: $n > u$.
 
-Concluimos por inducción que $\forall n \in \mathbb{N} : P_f(n) == n!$
+**La función calcula:** `val mitad = n / 2`
 
-### Ejemplo: el máximo de una lista
+**Después realiza las llamadas:**
 
-Sea $f : \text{List}[\mathbb{N}] \to \mathbb{N}$ la función que calcula el
-máximo de una lista de enteros positivos, no vacía. Y sea $P_f$ el siguiente
-programa en Scala:
+`aux(mitad)`
+`aux(n - mitad)`
 
-```scala
-def maxLin(l: List[Int]): Int = {
-  if (l.tail.isEmpty) l.head
-  else math.max(maxLin(l.tail), l.head)
-}
-```
+Como $n > u \geq 1$, ambas partes son menores que n. Por la hipótesis de inducción, las dos llamadas calculan correctamente sus respectivas profundidades.
 
-Demostraremos que:
+**Finalmente, se ejecuta:**
 
-```math
-\forall n \in \mathbb{N} \setminus \{0\} : P_f(\text{List}(a_1, a_2, \ldots, a_n)) == f(\text{List}(a_1, a_2, \ldots, a_n))
-```
+`math.max(aux(mitad), aux(n - mitad)) + 1`
 
-**Caso base:** $n = 1$
+Se toma la mayor profundidad de las dos partes y se suma uno para contar la división actual.
 
-```math
-P_f(\text{List}(a_1)) \rightarrow \text{if } \text{List}(a_1).\text{tail.isEmpty then } \text{List}(a_1).\text{head else } \ldots \rightarrow \text{List}(a_1).\text{head} \rightarrow a_1
-```
+Por lo tanto, el resultado coincide con la especificación.
 
-Por otro lado, $f(\text{List}(a_1)) = a_1$. Entonces
-$P_f(\text{List}(a_1)) == f(\text{List}(a_1))$.
+**Terminación:**
 
-**Caso de inducción:** $n = k + 1$, $k \geq 1$. Se debe demostrar:
+En cada llamada recursiva, n se divide en dos partes menores que el valor original. Como ambas partes son enteros no negativos y menores que n, eventualmente llegan a ser menores o iguales al umbral.
 
-```math
-P_f(\text{List}(b_1, b_2, \ldots, b_k)) == f(\text{List}(b_1, b_2, \ldots, b_k)) \rightarrow P_f(\text{List}(a_1, a_2, \ldots, a_{k+1})) == f(\text{List}(a_1, a_2, \ldots, a_{k+1}))
-```
+En ese momento se alcanza el caso base y la recursión termina.
 
-Empecemos por calcular qué devuelve $P_f$ usando el modelo de sustitución:
+Por inducción, profundidad calcula correctamente el resultado para todo n no negativo y umbral positivo.
 
-```math
-P_f(L) \rightarrow \text{if } L.\text{tail.isEmpty then } L.\text{head else math.max}(P_f(L.\text{tail}), L.\text{head})
-```
+### `tiempoEstimado( )`
 
-```math
-\rightarrow \text{math.max}(P_f(\text{List}(a_2, \ldots, a_{k+1})), a_1)
-```
+La función suma la profundidad del proceso y el trabajo distribuido entre los procesadores disponibles.
 
-Sea $b = P_f(\text{List}(a_2, \ldots, a_{k+1}))$; por la hipótesis de
-inducción, $b = f(\text{List}(a_2, \ldots, a_{k+1}))$. Hay dos posibilidades:
+#### Especificación:
 
-- Si $\text{math.max}(b, a_1) = b$, entonces $b \geq a_1$ y
- $b == f(\text{List}(a_1, a_2, \ldots, a_{k+1}))$.
-- Si $\text{math.max}(b, a_1) = a_1$, entonces $a_1 \geq b$ y
- $a_1 == f(\text{List}(a_1, a_2, \ldots, a_{k+1}))$.
+Para $n \geq 0$, $p > 0$ y $u > 0$:
 
-Por lo tanto, $P_f(L) == f(L)$.
+$$
+tiempoEstimado(n,p,u) =
+D(n,u) + \left\lfloor \frac{n}{p} \right\rfloor
+$$
 
-Concluimos por inducción que:
+Se utiliza la división entera porque trabajo(n) y p son valores de tipo Int.
 
-```math
-\forall n \in \mathbb{N} \setminus \{0\} : P_f(\text{List}(a_1, a_2, \ldots, a_n)) == f(\text{List}(a_1, a_2, \ldots, a_n))
-```
+#### Demostración.
 
-## 2. Argumentar la corrección de programas iterativos
+La función realiza las siguientes operaciones:
 
-Para argumentar la corrección de programas iterativos, se debe formalizar cómo
-es la iteración. Esto implica definir:
+- Comprueba que p > 0. Si no se cumple, lanza una excepción mediante require.
 
-- Cómo se representa un estado de la iteración, $s$.
-- Cuál es el estado inicial, $s_0$.
-- Cuál es el estado final (o cómo se reconoce que un estado es final): $s_f$.
-- Qué condición (o predicado) cumple todo estado: $\text{Inv}(s)$ (invariante
-  de la iteración).
-- El mecanismo para pasar de un estado al siguiente: $\text{transformar}(s)$.
-  Si $s_i$ es el estado $i$, entonces $\text{transformar}(s_i) = s_{i+1}$.
-
-Un programa iterativo tiene la siguiente forma:
+- Llama a profundidad(n, umbral), que por la demostración anterior devuelve correctamente $D(n,u)$.
 
-```scala
-def Pf(a: A): B = { // Pf recibe a de tipo A, y devuelve f(a) de tipo B
-  def Pf_iter(s: Estado): B =
-    if (esFinal(s)) respuesta(s) else Pf_iter(transformar(s))
-  Pf_iter(s0)
-}
-```
+- Llama a trabajo(n), que devuelve n.
 
-Demostración de corrección:
+- Divide el resultado entre p. Como ambos valores son enteros, obtiene $\lfloor n/p \rfloor$.
 
-- $\text{Inv}(s_0)$: el estado inicial cumple la condición invariante.
-- Si $(s_i \neq s_f \land \text{Inv}(s_i)) \rightarrow \text{Inv}(\text{transformar}(s_i))$:
-  el nuevo estado cumple la condición invariante si el estado anterior la
-  cumplía.
-- De lo anterior se concluye $\text{Inv}(s_f)$, es decir, el estado final
-  cumple la condición invariante. Luego,
-  $\text{Inv}(s_f) \rightarrow \text{respuesta}(s_f) == f(a)$.
-- Finalmente, demostrar que siempre se llega al estado final $s_f$. Esto
-  implica que
-  $P_f(a) == \text{iter}(s_0) == \text{respuesta}(s_f) == f(a)$.
+- Suma ambos resultados y devuelve el valor como Double.
 
-### Ejemplo: factorial iterativo
+Por lo tanto:
 
-Considere el siguiente programa iterativo en Scala para calcular la función
-factorial:
+$$
+\begin{aligned}
+tiempoEstimado(n,p,u)
+&= profundidad(n,u) + trabajo(n)/p \
+&= D(n,u) + \left\lfloor \frac{n}{p} \right\rfloor
+\end{aligned}
+$$
 
-```scala
-def Pf(n: Int): Int = { // Pf recibe n de tipo Int, y devuelve n! de tipo Int
-  def Pf_iter(i: Int, n: Int, ac: Int): Int =
-    if (i > n) ac else Pf_iter(i + 1, n, i * ac)
-  Pf_iter(1, n, 1)
-}
-```
+El resultado coincide con la especificación.
 
-Este programa implementa el siguiente proceso iterativo:
+#### Terminación.
 
-- Un estado $s = (i, n, ac)$.
-- El estado inicial es $s_0 = (1, n, 1)$.
-- $(i, n, ac)$ es final si $i > n$, o lo que es lo mismo, si $i = n + 1$.
-- La invariante de ciclo es
-  $\text{Inv}(i, n, ac) \equiv i \leq n + 1 \land ac = (i-1)!$.
-  La invariante de ciclo es una relación que SIEMPRE se cumple en el ciclo.
-- $\text{transformar}((i, n, ac)) = (i+1, n, i \ast ac)$.
+tiempoEstimado realiza una cantidad finita de operaciones y llama a profundidad, cuya terminación ya fue demostrada. La función trabajo devuelve directamente su argumento, por lo que también termina.
 
-Ahora, demostramos los puntos mencionados:
-
-**1.** $\text{Inv}(s_0)$: el estado inicial cumple la condición invariante.
-
-```math
-s_0 = (1, n, 1) \implies 1 \leq n + 1 \land 1 = 0!
-```
-
-**2.** La invariante se mantiene con la transformación de estados,
-$(s_i \neq s_f \land \text{Inv}(s_i)) \rightarrow \text{Inv}(\text{transformar}(s_i))$:
-
-1. Primer cambio, $i = i + 1$, lo que implica $ac = ((i+1) - 1)! = i!$.
-2. Segundo cambio, $ac = i \ast ac$, entonces $ac = (i - 1)! \ast i = i!$.
-3. Como se puede ver en ambos cambios indicados en la transformación, la
-   invariante se mantiene.
-
-**3.** $\text{Inv}(s_f) \rightarrow \text{respuesta}(s_f) == f(a)$
-
-```math
-(n + 1 \leq n + 1) \land ac = ((n+1)-1)! \rightarrow ac == n!
-```
-
-**4.** En cada paso, la componente $i$ del estado incrementa, acercándose a $n+1$.
-Después de $n$ iteraciones, se alcanza $n+1$.
-
-Esto implica que $P_f(n) == \text{iter}(1, n, 1) == n!$
-
-### Ejemplo: el máximo de una lista
-
-Se desea calcular el máximo de una lista de enteros positivos, no vacía. Sea
-$f : \text{List}[\mathbb{N}] \to \mathbb{N}$ la función que calcula ese valor.
-Y sea $P_f$ el siguiente programa en Scala:
-
-```scala
-def maxIt(l: List[Int]): Int = {
-  def maxAux(max: Int, l: List[Int]): Int = {
-    if (l.isEmpty) max
-    else maxAux(math.max(max, l.head), l.tail)
-  }
-  maxAux(l.head, l.tail)
-}
-```
-
-Este programa implementa el siguiente proceso iterativo:
-
-- Un estado $s = (max, l)$ donde $l = \text{List}(a_i, a_{i+1}, \ldots, a_k)$
-  es una cola de $L$.
-- El estado inicial es
-  $s_0 = (L.\text{head}, L.\text{tail}) = (a_1, \text{List}(a_2, \ldots, a_k))$.
-- $s = (max, l)$ es final si $l$ es vacía.
-- $\text{Inv}(max, l) \equiv l = \text{List}(a_i, a_{i+1}, \ldots, a_k) \land max = f(\text{List}(a_1, a_2, \ldots, a_{i-1}))$.
-- $\text{transformar}((max, l)) = (nmax, l.\text{tail})$ donde $nmax = max$ si
-  $max \geq l.\text{head}$, y $nmax = l.\text{head}$ si no.
-
-Demostración de los puntos:
-
-**1.** $\text{Inv}(s_0)$: el estado inicial cumple la condición invariante.
-
-```math
-s_0 = (a_1, \text{List}(a_2, \ldots, a_k)) \implies a_1 = f(\text{List}(a_1))
-```
-
-**2.** $(s_i \neq s_f \land \text{Inv}(s_i)) \rightarrow \text{Inv}(\text{transformar}(s_i))$
-
-```math
-\neg\, l.\text{isEmpty} \land l = \text{List}(a_i, a_{i+1}, \ldots, a_k) \land max = f(\text{List}(a_1, a_2, \ldots, a_{i-1}))
-```
-
-```math
-\rightarrow l.\text{tail} = \text{List}(a_{i+1}, \ldots, a_k) \land nmax = f(\text{List}(a_1, \ldots, a_i))
-```
-
-**3.** $\text{Inv}(s_f) \rightarrow \text{respuesta}(s_f) == f(a)$
-
-```math
-\text{Inv}((max, \text{List}())) \rightarrow max = f(\text{List}(a_1, \ldots, a_k))
-```
-
-**4.** En cada paso, la lista $l$ se reduce, acercándose a ser vacía. Después de
-$k$ iteraciones, $l = \text{List}()$.
-
-Esto implica que $P_f(L) == \text{maxAux}(L.\text{head}, L.\text{tail}) == f(L)$
+En consecuencia, para entradas que cumplen las condiciones de los require, tiempoEstimado termina y devuelve el resultado especificado.

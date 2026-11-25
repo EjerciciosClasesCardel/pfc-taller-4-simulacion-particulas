@@ -9,8 +9,8 @@ Scala que la implementa. Se demuestra que $P_f$ es correcto probando
 
 $$\forall a \in A : P_f(a) == f(a)$$
 
-Los programas de los puntos 2, 4 y 5 recorren datos con una función interna
-`aux` de recursión de cola, es decir, son programas iterativos. Para argumentar
+Los programas de los puntos 2, 3, 4 y 5 recorren datos con una función interna
+(`aux` o `segmento`) de recursión de cola, es decir, son programas iterativos. Para argumentar
 su corrección se formaliza la iteración con:
 
 * un estado $s$ de la iteración,
@@ -28,7 +28,7 @@ Y se demuestran cuatro cosas:
 final contiene la respuesta correcta.
 4. Siempre se llega a $s_f$ (terminación), con una medida que decrece en cada paso.
 
-Cuando la función es recursiva en árbol (como el reparto por mitades del punto 4), se usa inducción
+Cuando la función es recursiva en árbol (como el reparto por mitades de los puntos 1, 3 y 4), se usa inducción
 fuerte sobre el tamaño de la entrada.
 
 Notación: $P(x) \rightarrow e$ indica un paso de evaluación del programa
@@ -183,7 +183,9 @@ $c' = 0 + (3)(2) = 6$
 
 El resultado es $[2, 8, 6]$
 
-Tanto `pasoSecuencial` como `pasoParalelo` deben producir el mismo resultado
+`pasoSecuencial` da ese resultado. `pasoParalelo` con `umbral = 1` parte $[0, 3)$ en $m = 1$: el tramo $[0, 1)$ da $[2]$ y
+el tramo $[1, 3)$ se parte de nuevo en $m = 2$ y da $[8]$ y $[6]$. Al concatenar queda
+$[2] ++ ([8] ++ [6]) = [2, 8, 6]$, el mismo resultado
 
 
 ### Conclusión del punto 1
@@ -811,7 +813,7 @@ Para $n = 10$ y $\mu = 3$ ($\tau = 3$), la especificación se evalúa así:
 $$D_3(10) = 1 + \max\big(D_3(5), D_3(5)\big) = 1 + \big(1 + \max(D_3(2), D_3(3))\big) = 1 + (1 + 3) = 5$$
 
 El árbol de particiones de $10$ tiene este aspecto. La profundidad es el mayor costo de una hoja,
-que es el nivel más tamaño:
+que es el nivel más el tamaño:
 
 ```mermaid
 graph TD
@@ -946,14 +948,14 @@ $$\widehat{S}(n, p, \mu) = \frac{W(n)}{\widehat{T}(n, p, \mu)} = \frac{n}{D_\tau
 
 y es la que `App.scala` calcula con `trabajo(n).toDouble / tiempoEstimado(n, nucleos, u)`.
 
-**Fila de control.** Cuando el umbral es $n$ se cumple $n \leq \tau$, y por el punto 4 $D_\tau(n) = n$: no hay particiones y `pasoParalelo` recorre lo mismo que `pasoSecuencial`. Por eso la aceleración medida debe ser cercana a $1$, y la diferencia es ruido de la medición. La estimada de esa fila es $\frac{n}{n + n/p} = \frac{p}{p+1}$ ($0.89$ con $p = 8$): $\widehat{T}$ suma $D_\tau$ y $W/p$ aunque no haya partes repartidas, así que aquí sobrestima el tiempo. Esto supone que `pasoParalelo` parte solo cuando el segmento es mayor que el umbral, como en el punto 4.
+**Fila de control.** Cuando el umbral es $n$ se cumple $n \leq \tau$, y por el punto 4 $D_\tau(n) = n$: no hay particiones y `pasoParalelo` recorre lo mismo que `pasoSecuencial`. Por eso la aceleración medida debe ser cercana a $1$, y la diferencia es ruido de la medición. La estimada de esa fila es $\frac{n}{n + n/p} = \frac{p}{p+1}$ ($0.91$ con $p = 10$): $\widehat{T}$ suma $D_\tau$ y $W/p$ aunque no haya partes repartidas, así que aquí sobrestima el tiempo. Esto supone que `pasoParalelo` parte solo cuando el segmento es mayor que el umbral, como en el punto 4.
 
 **Fracción serial (ley de Amdahl).** Si una fracción $f$ del trabajo no se reparte y el resto se reparte entre $p$ núcleos, el tiempo paralelo relativo es $f + \frac{1-f}{p}$, y la aceleración es 
 
 $$S = \frac{1}{f + \frac{1-f}{p}} \quad\Longrightarrow\quad \frac{1}{S} = f\left(1 - \frac{1}{p}\right) + \frac{1}{p}
 \quad\Longrightarrow\quad f = \frac{\frac{1}{S} - \frac{1}{p}}{1 - \frac{1}{p}}$$
 
-Por ejemplo, con $S = 2.4$ y $p = 8$: $f = \frac{1/2.4 - 1/8}{1 - 1/8} = \frac{1}{3} \approx 0.33$. Si $S < 1$ la fórmula da $f > 1$, que no tiene sentido como fracción: el paralelo costó más que el secuencial y no se interpreta. Con $p \leq 1$, `fraccionSerial` devuelve $1$, para no dividir entre cero.
+Por ejemplo, con $S = 2.4$ y $p = 10$: $f = \frac{1/2.4 - 1/10}{1 - 1/10} = \frac{19}{54} \approx 0.35$. Si $S < 1$ la fórmula da $f > 1$, que no tiene sentido como fracción: el paralelo costó más que el secuencial y no se interpreta. Con $p \leq 1$, `fraccionSerial` devuelve $1$, para no dividir entre cero.
 
 ### Encadenamiento de los llamados
 

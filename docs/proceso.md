@@ -1277,11 +1277,11 @@ flowchart TD
 ## 5.3 La medición en `App.scala`
 
 `App.scala` arma la tabla del informe de paralelización. Para cada tamaño de sistema hace estos pasos:
-1. Define los tamaños `500000`, `1000000` y `2000000`, el paso de tiempo `dt = 0.01` y las repeticiones (`5`).
+1. Recibe como argumentos opcionales las repeticiones (`10` por omisión) y los tamaños (`1000000`, `2000000` y `4000000` por omisión), y define el paso de tiempo `dt = 0.01`.
 2. `crear(n)` construye un sistema de `n` partículas con `Array.tabulate`, sin azar: el mismo `n` da siempre el mismo sistema.
 3. Para cada tamaño prepara los umbrales `n`, `n/2`, `n/8`, `n/64`, `n/512`.
-4. Mide `pasoSecuencial` con `medir(5)`: cada una de las cinco repeticiones calienta primero con ScalaMeter, sin tomar el tiempo, para que la máquina virtual optimice el código, y `medir` devuelve la mediana en milisegundos.
-5. Para cada umbral mide `pasoParalelo` con el mismo `medir(5)` (mismo calentamiento y misma mediana) y calcula la aceleración medida con `aceleracion`.
+4. Antes de la primera fila de cada tamaño hace un calentamiento que se descarta: mide `pasoSecuencial` y `pasoParalelo` sin guardar el resultado, porque la primera vez que se reserva memoria para un sistema de ese tamaño la máquina tarda más y esa demora caería sobre la primera fila.
+5. Para cada umbral mide `pasoSecuencial` justo antes y `pasoParalelo` después, los dos con `medir(repeticiones)` (cada repetición calienta con ScalaMeter y `medir` devuelve la mediana en milisegundos), y calcula la aceleración medida con `aceleracion`. Medir el secuencial junto a cada umbral hace que los dos tiempos compartan las condiciones de la máquina.
 6. Calcula también la aceleración estimada con el punto 4 y la fracción serial con la ley de Amdahl.
 7. Imprime una fila de la tabla por cada pareja (tamaño, umbral).
 
@@ -1289,16 +1289,16 @@ El primer umbral de cada tamaño es el propio `n`: no reparte nada y es la **fil
 
 ### Seguimiento con una fila
 
-Para `n = 1000000` y umbral `125000`, con tiempos supuestos de 24.0 ms el secuencial y 10.0 ms el paralelo, en una máquina de 8 núcleos. Estos valores son ilustrativos, no una medición real:
+Se toma `n = 1000000` y umbral `125000`, con tiempos supuestos de 24.0 ms el secuencial y 10.0 ms el paralelo, en una máquina de 10 núcleos. Estos valores son ilustrativos, no una medición real:
 
 | Paso | Cálculo| Resultado |
 |---|---|---|
 | 1 | `aceleracion(24.0, 10.0)` | 2.4|
-| 2 | `tiempoEstimado(1000000, 8, 125000)` | `125003 + 125000.0 = 250003.0`|
-| 3 | aceleración estimada = `trabajo(n) / tiempoEstimado` | `1000000 / 250003` ≈ 4.0|
-| 4 | `fraccionSerial(2.4, 8)` = `(1/2.4 - 1/8) / (1 - 1/8)` | 1/3 ≈ 0.33|
+| 2 | `tiempoEstimado(1000000, 10, 125000)` | `125003 + 100000.0 = 225003.0`|
+| 3 | aceleración estimada = `trabajo(n) / tiempoEstimado` | `1000000 / 225003` ≈ 4.44|
+| 4 | `fraccionSerial(2.4, 10)` = `(1/2.4 - 1/10) / (1 - 1/10)` |  ≈ 0.35|
 
-La profundidad `125003` es 3 particiones más la hoja de `125000` partículas que cada tarea recorre sin repartir; por eso la estimación da cerca de 4 y no de 8. La aceleración medida (2.4) queda por debajo de la estimada (≈ 4.0) porque el modelo del punto 4 no cuenta costos reales como crear las tareas, coordinarlas y combinar resultados. La fracción serial sale de la ley de Amdahl a partir de la aceleración observada: es una estimación, no una medición directa del código secuencial.
+La profundidad `125003` es 3 particiones más la hoja de `125000` partículas que cada tarea recorre sin repartir; por eso la estimación da cerca de 4.4 y no de 10. La aceleración medida (2.4) queda por debajo de la estimada (≈ 4.44) porque el modelo del punto 4 no cuenta costos reales como crear las tareas, coordinarlas y combinar resultados. La fracción serial sale de la ley de Amdahl a partir de la aceleración observada: es una estimación, no una medición directa del código secuencial.
 
 ## Ejemplos de uso del punto 5
 

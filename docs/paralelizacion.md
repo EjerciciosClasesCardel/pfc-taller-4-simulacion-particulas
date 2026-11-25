@@ -261,7 +261,7 @@ la aceleración y compararla con la aceleración medida en la sección `5.2`
 En esta sección se describen tres funciones y el programa de arranque `App.scala`:
 
 - `medir(repeticiones)(cuerpo)`: Usa ScalaMeter, ejecuta `cuerpo` el número indicado de veces y devuelve la 
-   mediana de la muestra. En las pruebas principales se usaron 10 mediciones por caso
+   mediana de la muestra
 - `aceleracion(tSecuencial, tParalelo)`: Devuelve el cociente `tSecuencial / tParalelo`. Por ejemplo, si una tarea 
    tarda 100 ms en secuencial y 25 ms en paralelo, su aceleración es 4.0
 - `umbralConveniente(s, dt, umbrales)`: Mide `pasoParalelo` para cada candidato mediante `medir(5)` y devuelve el 
@@ -291,13 +291,9 @@ def umbralConveniente(s: Sistema, dt: Double, umbrales: List[Int]): Int = {
 }
 ```
 
-En `App.scala` se realizan mediciones con sistemas de 1.000.000, 2.000.000 y 4.000.000 de partículas, comparando los 
-tiempos de ejecución secuencial y paralela con diferentes umbrales. Para cada caso se tomaron 10 mediciones y 
-se usó la mediana. También se evaluaron la energía cinética y el centro de masa
+En `App.scala` se comparan los tiempos secuencial y paralelo del movimiento, la energía cinética y el centro de masa, con los tamaños, umbrales y repeticiones de la sección 3.1.
 
-Los resultados incluyen los tiempos, las aceleraciones y, para el movimiento, la estimación teórica. Aunque no se usa
-directamente `umbralConveniente` las tablas permiten identificar qué umbral obtuvo mejor tiempo en cada prueba. 
-Sin embargo, estos resultados varían según las condiciones de ejecución 
+Los resultados incluyen los tiempos, las aceleraciones y, para el movimiento, la estimación teórica.
 
 ### Qué umbral habría elegido `umbralConveniente`
 

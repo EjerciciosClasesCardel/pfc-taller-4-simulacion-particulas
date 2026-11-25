@@ -76,13 +76,52 @@ class SimulacionParticulas {
   // Punto 3: las mismas magnitudes en paralelo --------------------------------
 
   /** La energía del sistema, repartida con el mismo umbral del punto 1. */
-  def energiaParalela(s: Sistema, umbral: Int): Double = ???
+  def energiaParalela(s: Sistema, umbral: Int): Double = {
+    val limite = Math.max(umbral,1)
+
+    def calcular(desde: Int, hasta: Int): Double =
+      if (hasta - desde <= limite)
+        energiaSecuencial(s.slice(desde, hasta))
+      else {
+        val mitad = desde + (hasta-desde)/2
+
+        val (izquierda, derecha) = parallel(
+          calcular (desde, hasta),
+          calcular(mitad, hasta)
+        )
+        izquierda + derecha
+      }
+      calcular(0,s.length)
+  }
 
   /**
    * El centro de masa, repartido. Promediar los promedios de cada mitad da
    * otra cosa cuando las dos mitades no pesan igual.
    */
-  def centroDeMasaParalelo(s: Sistema, umbral: Int): Vector2 = ???
+  def centroDeMasaParalelo(s: Sistema, umbral: Int): Vector2 = {
+    val limite = Math.max(umbral,1)
+
+    def calcular(desde: Int, hasta: Int): (Vector2, Double)=
+      if (hasta - desde <= limite) {
+        val segmento = s.slice(desde, hasta)
+        val masa = masaTotal(segmento)
+        val centro = centroDeMasaSecuencial(segmento)
+        (centro * masa, masa)
+      }else{
+        val mitad = desde + (hasta - desde)/2
+        val (izquierda,derecha ) = parallel(
+          calcular (desde, mitad),
+          calcular (mitad, hasta)
+        )
+        (
+          izquierda._1 + derecha._1,
+          izquierda._2 + derecha._2,
+        )
+      }
+    val (sumaPonderada,masa) = calcular(0,s.length)
+    if (masa== 0.0) Vector2(0,0)
+    else sumaPonderada * (1.0/masa)
+  }
 
   // Punto 4: trabajo y profundidad --------------------------------------------
 

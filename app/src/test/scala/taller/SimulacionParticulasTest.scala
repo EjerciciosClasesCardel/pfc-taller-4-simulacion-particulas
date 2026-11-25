@@ -150,6 +150,48 @@ class SimulacionParticulasTest extends AnyFunSuite {
     assert(cerca(centroDeMasaSecuencial(pesado), Vector2(1.0, 0.0)))
   }
 
+  // Pruebas propias Punto 2: magnitudes globales ------------------------------
+
+  test("energiaSecuencial: particulas con componentes negativas calculan energia positiva") {
+    val sistemaNegativo: Sistema = Array(
+      Particula(Vector2(0, 0), Vector2(-4, 3), 3.0),
+      Particula(Vector2(1, 1), Vector2(0, -2), 2.0))
+    assert(cerca(energiaSecuencial(sistemaNegativo), 41.5))
+  }
+
+  test("energiaSecuencial: sistema con particulas en movimiento y reposo calcula suma exacta") {
+    val sistemaMixto: Sistema = Array(
+      Particula(Vector2(0, 0), Vector2(1, 2), 1.0),
+      Particula(Vector2(1, 1), Vector2(2, 1), 2.0),
+      Particula(Vector2(2, 2), Vector2(0, 0), 5.0),
+      Particula(Vector2(3, 3), Vector2(4, 0), 0.5))
+    assert(cerca(energiaSecuencial(sistemaMixto), 11.5))
+  }
+
+  test("masaTotal: suma de masas fraccionarias con decimales") {
+    val sistemaFraccionario: Sistema = Array(
+      Particula(Vector2(0, 0), Vector2(1, 1), 1.25),
+      Particula(Vector2(1, 0), Vector2(1, 1), 2.5),
+      Particula(Vector2(2, 0), Vector2(1, 1), 0.75),
+      Particula(Vector2(3, 0), Vector2(1, 1), 3.125))
+    assert(cerca(masaTotal(sistemaFraccionario), 7.625))
+  }
+
+  test("centroDeMasaSecuencial: particulas simetricas respecto al origen resultan en el origen") {
+    val cruzSimetrica: Sistema = Array(
+      Particula(Vector2(10, 0), Vector2(0, 0), 2.5),
+      Particula(Vector2(-10, 0), Vector2(0, 0), 2.5),
+      Particula(Vector2(0, 10), Vector2(0, 0), 2.5),
+      Particula(Vector2(0, -10), Vector2(0, 0), 2.5))
+    assert(cerca(centroDeMasaSecuencial(cruzSimetrica), Vector2(0.0, 0.0)))
+  }
+
+  test("centroDeMasaSecuencial: sistema de una sola particula tiene centro de masa en su posicion") {
+    val unaParticula: Sistema = Array(
+      Particula(Vector2(7.5, -12.3), Vector2(1.0, -1.0), 8.4))
+    assert(cerca(centroDeMasaSecuencial(unaParticula), Vector2(7.5, -12.3)))
+  }
+
   // Punto 3 -------------------------------------------------------------------
 
   test("energiaParalela: coincide con la secuencial en el ejemplo") {

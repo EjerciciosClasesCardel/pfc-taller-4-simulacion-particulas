@@ -444,29 +444,42 @@ directamente, y cuando es grande y se divide en dos partes:
 
 #### Caso base
 
-Cuando el segmento tiene un tamaño menor o igual al tope, `segmento` recorre sus partículas, acumulando la energía
-desde cero. El acumulador contiene la suma de las energías ya procesadas
+Cuando el segmento tiene un tamaño menor o igual al tope, la función `segmento` recorre sus partículas acumulando 
+la energía desde cero
+
+Este recorrido usa la misma idea demostrada en el `Lema 1`, pero comienza en el índice `desde`. La invariante 
+establece que en cada paso, el acumulador contiene la suma de las energías de las partículas desde `desde` hasta `i - 1`
+
+Inicialmente, `i = desde` y el acumulador vale cero, por lo que la invariante se cumple. En cada llamada se agrega 
+la energía de la siguiente partícula. Al llegar a `i = hasta`, el acumulador contiene exactamente la energía de 
+todo el segmento.
+
+Por lo tanto, el caso base calcula correctamente la energía del intervalo.
 
 #### Caso inductivo
 
 Cuando el intervalo supere el tope, se divide en dos mitades más pequeñas
+Suponemos que `aux(desde, m)` calcula correctamente la energía del segmento izquierdo y que `aux(m, hasta)` 
+calcula la del derecho, porque ambos tramos son más pequeños que el original.
 
-Al sumar ambos resultados obtenemos la energía del segmento: $E_{izq}+E_{der}=E_{a,b}$. Cuando se procesa
-el sistema completo, este resultado corresponde a $E(s)$
+Al combinar los resultados mediante `izq + der`, obtenemos la energía total del intervalo, porque las dos 
+mitades contienen todas las partículas sin repetirse. 
 
-Por tanto $energiaParalela(s, u) = energiaSecuencial(s)$
+Por lo tanto, `energiaParalela(s, u)` calcula la misma energía que `energiaSecuencial(s)`
 
 ### `centroDeMasaParalelo`
 
-Para calcular el centro de masa no se deben promediar directamente los centros de las mitades, porque sus
-masas pueden ser diferentes. La función conserva dos resultados parciales: $A = (R_A, M_A)$ y
-$B = (R_B, M_B)$
+La suma permite repartir el trabajo porque es asociativa y tiene un elemento neutro, el cero.  Esto significa que
+podemos sumar los resultados parciales en diferentes agrupaciones sin cambiar el resultado matemático
+En cambio, no podemos promediar directamente los centros de masa de las mitades, porque pueden contener diferentes
+cantidades de partículas o masas totales.
 
-- $R$: Suma ponderada de posiciones
-- $M$: La masa total
-- $A$ y $B$: Resultados parciales de dos segmentos, cada uno formado por una suma ponderada y una masa total
-- $R_A$ y $R_B$: Sumas ponderadas de los segmentos $A$ y $B$
-- $M_A$ y $M_B$: Masas totales de los segmentos $A$ y $B$
+Por ejemplo, consideramos tres partículas de masa 1, ubicadas en `(0,0)`, `(0,0)` y `(9,0)`. Si dividimos el sistema
+en `[p0 | p1, p2]`, el centro de la primera mitad es `(0, 0)` y el de la segunda es (4.5, 0).
+El promedio directo de ambos centros sería (2.25, 0), pero el centro de masa real es (3,0)
+
+Por esta razón, `centroDeMasaParalelo` combina primero las sumas ponderadas y las masas de cada segmento, y realiza 
+la división una sola vez al final
 
 La función `combinar` realiza:
 
@@ -475,6 +488,12 @@ La función `combinar` realiza:
 ```
 
 Matemáticamente: $A\oplus B = (R_A + R_B,\ M_A + M_B)$
+
+- $R$: Suma ponderada de posiciones
+- $M$: La masa total
+- $A$ y $B$: Resultados parciales de dos segmentos, cada uno formado por una suma ponderada y una masa total
+- $R_A$ y $R_B$: Sumas ponderadas de los segmentos $A$ y $B$
+- $M_A$ y $M_B$: Masas totales de los segmentos $A$ y $B$
 
 ### Asociatividad de la combinación
 
@@ -496,13 +515,17 @@ ponderada de sus posiciones y la masa total: $\left(\sum m_i r_i,\sum m_i\right)
 
 #### Caso inductivo
 
-Cuando el segmento supera el tope, se divide en dos intervalos más pequeños.
+Cuando el intervalo supera el tope, se divide en dos mitades más pequeñas
 
-Suponemos que la función calcula correctamente el resultado de cada mitad. Al usar `combinar`,
-se obtiene: $R = R_{izq} + R_{der}$ y $M = M_{izq} + M_{der}$
+Por hipótesis de inducción, suponemos que `aux(desde, m)` devuelve correctamente la suma ponderada y la masa del 
+segmento izquierdo, y que `aux(m, hasta)` devuelve las del segmento derecho
 
-Como los intervalos cubren todas las partículas sin repetirse, esas sumas corresponden al sistema completo,
-y finalmente, la división se realiza una sola vez: $C(s) = \frac{R}{M}$
+Al aplicar `combinar`, se suman las posiciones ponderadas y las masas de ambas mitades. Como los intervalos cubren 
+todas las partículas sin repetirse, el resultado corresponde a la suma ponderada y a la masa total del intervalo 
+original
+
+Si la masa total $M$ es diferente de cero, la función divide la suma ponderada $R$ entre $M$ una sola vez al final, 
+obteniendo $C(s) = \frac{R}{M}$
 
 Si $M = 0$, la función devuelve el origen $(0, 0)$ y evita dividir entre cero,
 por tanto, $centroDeMasaParalelo(s, u) = centroDeMasaSecuencial(s)$
@@ -510,12 +533,17 @@ por tanto, $centroDeMasaParalelo(s, u) = centroDeMasaSecuencial(s)$
 ### Terminación
 
 En ambas funciones paralelas, la función interna `segmento` avanza de una partícula a la siguiente hasta alcanzar
-el índice `hasta`
+el índice `hasta`, por lo que termina
 
-Las funciones `aux` dividen los intervalos en segmentos cada vez más pequeños hasta alcanzar el tope,
-que es como mínimo 1
+Las funciones `aux` dividen el intervalo únicamente cuando su tamaño `k = hasta - desde` supere el tope
+Como `tope >= 1`, en ese caso `k >= 2`. El punto medio se calcula como `m = desde + k / 2`, usando división entera. 
+Por ello, se cumple `desde < m < hasta`
 
-Así, ambas funciones paralelas terminan, incluso cuando el sistema está vacío
+Esto garantiza que ambas mitades tienen al menos una partícula y son estrictamente más pequeñas que el intervalo 
+original.
+
+Como los tamaños disminuyen en cada división, finalmente se alcanza el caso base. Por lo tanto ambas funciones 
+paralelas terminan, incluso cuando el sistema está vacío
 
 ### Ejemplo de energía
 
@@ -526,39 +554,44 @@ Se consideran dos partículas:
 | a         |    2 | (-1,0)    |
 | c         |    2 | (3,0)     |
 
-La energía de cada partícula es: $E_a = \frac12(2)(1^2) = 1$ y $E_c = \frac12(2)(3^2) = 9$,
-dando como resultado $E = 1 + 9 = 10$, por lo tanto:
+Con `umbral = 1`, el sistema `[a, c]` se divide en dos segmentos `[a]` y `[c]`
 
-```scala
-energiaParalela(Array(a, c), 1) == 10.0
-```
+- El segmento izquierdo calcula $E_a = 0.5 * 2 * 1^2 = 1$
+- El segmento de la derecha calcula $E_c = 0.5 * 2 * 3^2 = 9$
+
+Al combinar ambos resultados mediante `izq + der`, se obtiene $1 + 9 = 10$
+
+Por lo tanto, la versión paralela devuelve la misma energía que la secuencial
 
 ### Ejemplo de centro de masa
 
-Se consideran tres partículas de igual masa:
+Se consideran tres partículas de masa 1:
 
 | Partícula | Posición | Masa |
 |-----------|----------|-----:|
-| a         | (4,0)    |    2 |
-| b         | (8,0)    |    2 |
-| c         | (0,0)    |    2 |
+| p0        | (0,0)    |    1 |
+| p1        | (0,0)    |    1 |
+| p2        | (9,0)    |    1 |
 
-La suma ponderada es:
+Como `umbral = 1`, el sistema se divide inicialmente en `[p0 | p1, p2]`. La segunda mitad vuelve a dividirse 
+para calcular sus resultados:
 
-$R = (4, 0)(2) + (8, 0)(2) + (0, 0)(2) = (24, 0)$
+`Segmento izquierdo [p0]`:
+- Suma ponderada: (0,0)
+- Masa total: 1
+- Resultado parcial: ((0, 0), 1)
 
-La masa total es:
-$M = 2 + 2 + 2 = 6$
+`Segmento derecho [p1, p2]`:
+- Suma ponderada: (0, 0) + (9, 0) = (9, 0)
+- Masa total: 1 + 1  = 2
+- Resultado parcial: ((9, 0), 2)
 
-Entonces $C=\frac{(24,0)}{6}=(4,0)$
+`Combinación de ambos segmentos`: $((0,0), 1) \oplus ((9,0), 2) = ((9,0), 3)$
 
-- $(0, 0)$: Vector que representa el origen, usado cuando la masa total es cero
+Finalmente, se divide la suma ponderada entre la masa total: $C = (9, 0) / 3 = (3, 0)$
 
-Por lo tanto:
-
-```scala
-centroDeMasaParalelo(Array(a, b, c), 1) == Vector2(4, 0)
-```
+El resultado coincide con el cálculo secuencial. En cambio, promediar directamente los centro de ambas mitades
+daría (2.25, 0) que es incorrecto
 
 ### Consideración sobre números decimales
 

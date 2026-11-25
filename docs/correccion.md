@@ -387,27 +387,26 @@ incluido el vacío, y que las tres terminan tras $n$ pasos.
 Para un sistema de $n$ partículas, las funciones `energiaParalela` y `centroDeMasaParalelo`
 deben calcular las mismas magnitudes que sus versiones secuenciales.
 
-- La energía cinética total es: $E(s) = \sum_{i = 0}^{n - 1}\frac{1}{2}m_i\|v_i\|^2$
+- La energía cinética total es: $E(s) = \sum_{i = 0}^{n - 1}\frac{1}{2}m_i\lVert v_i \rVert^2$
 - La masa total es: $M(s) = \sum_{i = 0}^{n-1}m_i$
 - La suma ponderada es: $R(s) = \sum_{i = 0}^{n - 1}m_i r_i$
 
 El centro de masa se define como:
 
-$
+```math
 C(s) =
 \begin{cases}
-R(s)/M(s) & \text{si }M(s)\neq 0\\
-(0,0) & \text{si }M(s) = 0
+R(s)/M(s) & \text{si }M(s)\neq 0 \\ (0,0) & \text{si }M(s) = 0
 \end{cases}
-$
+```
 
 - $E(s)$: Energía cinética total del sistema
 - $M(s)$: Masa total de todas las partículas
 - $R(s)$: Suma de las posiciones de las partículas multiplicadas con sus respectivas masas
 - $C(s)$: Centro de masa del sistema
 - $\sum$: Símbolo de sumatoria, indica que se deben sumar varios valores
-- $\|v_i\|$: Rapidez de la partícula $i$, calculada a partir de su vector velocidad
-- $\|v_i\|^2$: Rapidez de la partícula elevada al cuadrado
+- $\lVert v_i \rVert$: Rapidez de la partícula $i$, calculada a partir de su vector velocidad
+- $\lVert v_i \rVert^2$: Rapidez de la partícula elevada al cuadrado
 
 ### `energiaParalela`
 
@@ -416,7 +415,7 @@ igual al tope, la función interna `segmento` calcula su energía mediante recur
 
 Sea un intervalo $[a, b)$
 
-- Su energía es: $E_{a,b} = \sum_{i = a}^{b - 1}\frac{1}{2}m_i\|v_i\|^2$
+- Su energía es: $E_{a,b} = \sum_{i = a}^{b - 1}\frac{1}{2}m_i\lVert v_i \rVert^2$
 - Si el intervalo se divide en $[a, m)$ y $[m, b)$, se cumple: $E_{a,b} = E_{a,m} + E_{m,b}$
 
 - $[a, b)$: Intervalo que incluye $a$ y excluye $b$
@@ -863,7 +862,9 @@ $$S(a,b) = \frac{a}{b}$$
 
 Sea $C = [\mu_1, \ldots, \mu_k]$ la lista de umbrales candidatos y $t_i$ el tiempo que `medir(5)` devuelve al medir `pasoParalelo` con el umbral $\mu_i$. Cada posición $i$ se mide una sola vez, así que un valor repetido en $C$ tiene un $t_i$ por cada aparición. Si $k \geq 1$, el resultado es el primer candidato de menor tiempo:
 
-$$U(s, dt, C) = \mu_j \quad\text{con}\quad j = \min\{\, i \mid t_i \leq t_l \text{ para todo } l \in \{1, \ldots, k\} \,\}$$
+```math
+U(s, dt, C) = \mu_j \quad\text{con}\quad j = \min\{\, i \mid t_i \leq t_l \text{ para todo } l \in \{1, \ldots, k\} \,\}
+```
 
 Si $C$ está vacía, $U(s, dt, C) = n$, donde $n = \lvert s \rvert$: con ese umbral no se parte nada, que equivale a no repartir.
 
@@ -912,7 +913,9 @@ La función no hace ninguna llamada recursiva, así que termina en un paso. Se i
 * **Estado final:** $R = \text{Nil}$.
 * **Invariante.** Sea $V$ el conjunto de las posiciones de los candidatos que ya no están en $R$ (los vistos). Como $R$ se recorre en orden, toda posición de $V$ es menor que la de cualquier elemento de $R$. Sea $j$ la menor posición de $V$ con tiempo mínimo:
 
-$$j = \min\{\, i \in V \mid t_i \leq t_l \text{ para todo } l \in V \,\}$$
+```math
+j = \min\{\, i \in V \mid t_i \leq t_l \text{ para todo } l \in V \,\}
+```
 
 La invariante dice que $m = \mu_j$ y $\theta = t_j$, es decir, $m$ es el primer candidato de menor tiempo entre los vistos.
 
@@ -920,11 +923,11 @@ La invariante dice que $m = \mu_j$ y $\theta = t_j$, es decir, $m$ es el primer 
 
 **Demostración.**
 
-1. **Inicio.** Aquí $V = \{1\}$, $m = \mu_1$ y $\theta = t_1$. El único elemento de $V$ es $1$, así que $j = 1$. La invariante se cumple.
+1. **Inicio.** Aquí $V = \lbrace 1 \rbrace$, $m = \mu_1$ y $\theta = t_1$. El único elemento de $V$ es $1$, así que $j = 1$. La invariante se cumple.
 2. **Conservación.** Se supone la invariante con $R = \mu_i :: \text{cola}$ y $m = \mu_j$. Como $i$ es mayor que toda posición de $V$, $i > j$.
-    * Si $t_i < \theta$: $t_i$ es estrictamente menor que todos los $t_l$ con $l \in V$, porque $\theta \leq t_l$. Entonces $i$ es la única posición de $V \cup \{i\}$ con el tiempo mínimo, y el nuevo estado $(\text{cola},\ \mu_i,\ t_i)$ cumple la invariante.
-    * Si $t_i \geq \theta$: el mínimo de $V \cup \{i\}$ sigue siendo $\theta$. Como $i > j$, aunque $t_i = \theta$ la menor posición con ese tiempo sigue siendo $j$. El estado no cambia y la invariante se mantiene.
-3. **Final.** Con $R = \text{Nil}$, $V = \{1, \ldots, k\}$. La invariante dice que $m = \mu_j$ con $j$ la menor posición de menor tiempo, que es $U(s, dt, C)$. 
+    * Si $t_i < \theta$: $t_i$ es estrictamente menor que todos los $t_l$ con $l \in V$, porque $\theta \leq t_l$. Entonces $i$ es la única posición de $V \cup \lbrace i \rbrace$ con el tiempo mínimo, y el nuevo estado $(\text{cola},\ \mu_i,\ t_i)$ cumple la invariante.
+    * Si $t_i \geq \theta$: el mínimo de $V \cup \lbrace i \rbrace$ sigue siendo $\theta$. Como $i > j$, aunque $t_i = \theta$ la menor posición con ese tiempo sigue siendo $j$. El estado no cambia y la invariante se mantiene.
+3. **Final.** Con $R = \text{Nil}$, $V = \lbrace 1, \ldots, k \rbrace$. La invariante dice que $m = \mu_j$ con $j$ la menor posición de menor tiempo, que es $U(s, dt, C)$. 
 
 ### Terminación
 
@@ -973,9 +976,9 @@ $$\text{aux}(\text{List}(4, 2), 8, 9.0) \rightarrow \text{aux}(\text{List}(2), 4
 
 | Estado $(R, m, \theta)$| Visto $V$| Qué pasa|
 |---|---|---|
-| $(\text{List}(4, 2),\ 8,\ 9.0)$ | $\{1\}$ | estado inicial, $j = 1$|
-| $(\text{List}(2),\ 4,\ 6.5)$| $\{1, 2\}$ | $t_2 = 6.5 < 9.0$: el 4 pasa a ser el mejor, $j = 2$ |
-| $(\text{Nil},\ 4,\ 6.5)$ | $\{1, 2, 3\}$ | $t_3 = 7.0 \geq 6.5$: se conserva el 4, $j = 2$ |
+| $(\text{List}(4, 2),\ 8,\ 9.0)$ | $\lbrace 1 \rbrace$ | estado inicial, $j = 1$|
+| $(\text{List}(2),\ 4,\ 6.5)$| $\lbrace 1, 2 \rbrace$ | $t_2 = 6.5 < 9.0$: el 4 pasa a ser el mejor, $j = 2$ |
+| $(\text{Nil},\ 4,\ 6.5)$ | $\lbrace 1, 2, 3 \rbrace$ | $t_3 = 7.0 \geq 6.5$: se conserva el 4, $j = 2$ |
 
 El resultado $4$ es el candidato de menor tiempo, que es $U(s, dt, C)$.
 

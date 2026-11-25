@@ -58,7 +58,7 @@ mientras que uno muy pequeño genera demasiadas tareas
 
 ## 2.2 Paralelización del movimiento de partículas 
 
-Para una partícula $i$, la operación es: $\mathbf{r}'_i = \mathbf{r}_i + \mathbf{v}_i\,dt$
+Para una partícula $i$, la operación es: $\mathbf{r}'_i = \mathbf{r}_i + \mathbf{v}_i dt$
 
 - $\mathbf{r}_i$: Es la posición inicial
 - $\mathbf{v}_i$: Es la velocidad 
@@ -122,13 +122,12 @@ Las especificaciones usadas son:
 - La masa total del sistema es: $M(s) = \sum_{i = 0}^{n - 1}m_i$
 - El centro de masa se calcula mediante:
 
-$
+```math
 \mathbf{C}(s) =
 \begin{cases}
-\displaystyle\frac{\sum_{i = 0}^{n-1}m_i\mathbf{r}_i}{M(s)}, & M(s)\ne 0,\\[4pt]
-(0,0), & M(s) = 0.
+\displaystyle\frac{\sum_{i = 0}^{n-1}m_i\mathbf{r}_i}{M(s)}, & M(s)\ne 0, \\[4pt] (0,0), & M(s) = 0.
 \end{cases}
-$
+```
 
 Estos resultados forman la línea base de corrección de las magnitudes globales. Para la medición de rendimiento,  
 se compara el tiempo de `energiaSecuencial` con el de `energiaParalela` , y el de `centroDeMasaSecuencial` con el de 
@@ -154,7 +153,7 @@ movimiento, la combinación no concatena arreglos de partículas.
 pareja `(Vector2, Double)` que representa, respectivamente, la suma ponderada de posición y la suma de masa. La operación de 
 combinación es:
 
-$(\mathbf R_1, M_1)\oplus(\mathbf R_2, M_2) = (\mathbf R_1 + \mathbf R_2, \, M_1 + M_2)$
+$(\mathbf R_1, M_1)\oplus(\mathbf R_2, M_2) = (\mathbf R_1 + \mathbf R_2, M_1 + M_2)$
 
 ```scala
 def combinar(
@@ -229,7 +228,7 @@ El punto 4 reúne tres funciones que calculan un costo teórico sin cronometrar 
 de la hoja final) y `tiempoEstimado(n, p, umbral)` suma la profundidad y el trabajo dividido entre `p` procesadores. 
 El modelo es:
 
-- El trabajo total es: $W(n) = n $
+- El trabajo total es: $W(n) = n$
 - La profundidad del cálculo es: $D(n, u) = \operatorname{profundidad}(n, u)$
 - El tiempo estimado se calcula así: $T_{\mathrm{estimado}}(n, p, u) = D(n, u) + \frac{W(n)}{p}$
 - La aceleración estimada es: $S_{\mathrm{estimada}} = \frac{W(n)}{T_{\mathrm{estimado}}(n, p, u)}$
@@ -483,7 +482,7 @@ Con un movimiento de 4.000.000 y el umbral `n/8` se obtuvo una aceleración de 3
 
 $f = \frac{\frac{1}{3.06} - \frac{1}{10}}{1 - \frac{1}{10}}$
 
-$f \approx 0.252 = 25.2\%$
+$`f \approx 0.252 = 25.2\%`$
 
 Según esta estimación, la fracción no paralelizable equivalente es aproximadamente del 25,2%
 

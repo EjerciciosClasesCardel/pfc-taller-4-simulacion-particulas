@@ -1289,7 +1289,7 @@ El primer umbral de cada tamaño es el propio `n`: no reparte nada y es la **fil
 
 ### Seguimiento con una fila
 
-Para `n = 1000000` y umbral `125000`, con tiempos supuestos de 24.0 ms el secuencial y 10.0 ms el paralelo, en una máquina de 10 núcleos. Estos valores son ilustrativos, no una medición real:
+Se toma `n = 1000000` y umbral `125000`, con tiempos supuestos de 24.0 ms el secuencial y 10.0 ms el paralelo, en una máquina de 10 núcleos. Estos valores son ilustrativos, no una medición real:
 
 | Paso | Cálculo| Resultado |
 |---|---|---|

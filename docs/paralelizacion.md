@@ -103,7 +103,7 @@ def pasoParalelo(s: Sistema, dt: Double, umbral: Int): Sistema = {
 La combinación `izq ++ der` conserva el orden de las partículas, pero crea y copia arreglos en los nodos internos 
 del árbol. Por eso, la aceleración del movimiento también depende del costo de combinar los resultados
 
-## 2.3 Punto 2: magnitudes globales secuenciales de referencias
+## 2.3 Punto 2: magnitudes globales secuenciales de referencia
 
 Las funciones del punto 2 sirven como referencia para verificar las magnitudes paralelas y comparar sus tiempos:
 
@@ -206,7 +206,7 @@ Para reproducir estas mediciones se documentó el siguiente comando:
 JAVA_OPTS="-Xms8g -Xmx8g -XX:+AlwaysPreTouch -XX:+UseParallelGC" app/build/install/app/bin/app 10
 ```
 
-Las pruebas compararon las versiones secuenciales y paralelas de movimiento, energía cinética y centro de masa con los 
+Las mediciones compararon las versiones secuenciales y paralelas de movimiento, energía cinética y centro de masa con los 
 tamaños y umbrales indicados. Los resultados de las tres ejecuciones se presentan en la sección 4 y en la sección 5 se
 analiza el límite de aceleración mediante la ley de Amdahl
 
@@ -258,11 +258,11 @@ la aceleración y compararla con la aceleración medida en la sección `5.2`
 
 ## 3.3 Punto 5: Mediciones aceleración y selección del umbral
 
-En este se describen tres funciones y el programa de arranque `App.scala`:
+En esta sección se describen tres funciones y el programa de arranque `App.scala`:
 
 - `medir(repeticiones)(cuerpo)`: Usa ScalaMeter, ejecuta `cuerpo` el número indicado de veces y devuelve la 
    mediana de la muestra. En las pruebas principales se usaron 10 mediciones por caso
-- `aceleración(tSecuencial, tParalelo)`: Devuelve el cociente `tSecuencial / tParalelo`. Por ejemplo, si una tarea 
+- `aceleracion(tSecuencial, tParalelo)`: Devuelve el cociente `tSecuencial / tParalelo`. Por ejemplo, si una tarea 
    tarda 100 ms en secuencial y 25 ms en paralelo, su aceleración es 4.0
 - `umbralConveniente(s, dt, umbrales)`: Mide `pasoParalelo` para cada candidato mediante `medir(5)` y devuelve el 
    umbral asociado al menor tiempo observado en esas llamadas. Si la lista está vacía, devuelve `s.length` que equivale 
@@ -298,6 +298,20 @@ se usó la mediana. También se evaluaron la energía cinética y el centro de m
 Los resultados incluyen los tiempos, las aceleraciones y, para el movimiento, la estimación teórica. Aunque no se usa
 directamente `umbralConveniente` las tablas permiten identificar qué umbral obtuvo mejor tiempo en cada prueba. 
 Sin embargo, estos resultados varían según las condiciones de ejecución 
+
+### Qué umbral habría elegido `umbralConveniente`
+
+`umbralConveniente` mide cada candidato una sola vez, uno tras otro y no en paralelo, a propósito: si se midieran a la vez, cada medición le quitaría núcleos a las demás y los tiempos dejarían de ser comparables. Con los tiempos de la sección 4.1, el umbral de menor tiempo paralelo en cada tamaño es:
+
+| Partículas | Umbral de menor tiempo | Paralelo (ms) | Secuencial (ms) | Aceleración |
+|---------|--------|--------|-------|--------|
+| 1.000.000 | 125.000 | 2,43 |  6,83 | 2,83 |
+| 2.000.000 | 31.250 | 5,99 | 16,85 | 2,75 |
+| 4.000.000 | 500.000 | 9,96 | 30,45 | 3,06 |
+
+Con 1.000.000 y 4.000.000 de partículas el umbral elegido es `n/8`; con 2.000.000 es `n/64`, y su tiempo (5,99 ms) casi empata con el de `n/8` (6,03 ms). En ningún tamaño gana el umbral más pequeño (`n/512`) ni el igual a `n`. 
+
+`umbralConveniente` compara los tiempos de `pasoParalelo` entre sí, no la aceleración. Por eso con 2.000.000 de partículas elige `n/64`, aunque la mayor aceleración de la tabla está en `n/8` (2,79): el secuencial se mide aparte en cada fila y esas diferencias caen dentro de la variación entre corridas. Además, la elección puede cambiar de una ejecución a otra, porque mide cada candidato una sola vez.
 
 # 4 Resultados experimentales
 

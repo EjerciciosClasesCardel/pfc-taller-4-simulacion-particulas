@@ -291,7 +291,7 @@ y la invariante da $i \leq n$, luego $i = n$ y $acc = \sum_{j=0}^{n-1} g(j)$.
 Cada transformación la disminuye en $1$. Un natural no puede disminuir indefinidamente, así que tras
 exactamente $n$ transformaciones se llega a $i = n$, que es un estado final.
 
-Luego $A_g(0, 0_V) = \sum_{j=0}^{n-1} g(j)$. $\blacksquare$
+Luego $A_g(0, 0_V) = \sum_{j=0}^{n-1} g(j)$. 
 
 ### `energiaSecuencial` y `masaTotal`
 
@@ -302,7 +302,7 @@ Ambas son instancias del Lema 1 con $V = \mathbb{R}$:
 | `energiaSecuencial` | $`\tfrac{1}{2}\, m_j \,\lVert v_j \rVert^2`$ | `acc + 0.5 * s(i).masa * v * v`, con `v = s(i).vel.norma` |
 | `masaTotal` | $m_j$ | `acc + s(i).masa` |
 
-Por el Lema 1, $P_E(s) = \sum_j \tfrac{1}{2} m_j \lVert v_j \rVert^2 = E(s)$ y $P_M(s) = \sum_j m_j = M(s)$. $\blacksquare$
+Por el Lema 1, $P_E(s) = \sum_j \tfrac{1}{2} m_j \lVert v_j \rVert^2 = E(s)$ y $P_M(s) = \sum_j m_j = M(s)$. 
 
 ### `centroDeMasaSecuencial`
 
@@ -320,7 +320,7 @@ Después de `aux` el programa divide una sola vez, fuera del ciclo. Hay dos caso
 * **$M(s) = 0$.** La condición `masa == 0.0` se cumple y el programa devuelve $(0, 0) = C(s)$.
 * **$M(s) \neq 0$.** El programa devuelve $`(S_x / M(s),\ S_y / M(s)) = \frac{1}{M(s)}\, S = C(s)`$.
 
-Por lo tanto $P_C(s) = C(s)$. $\blacksquare$
+Por lo tanto $P_C(s) = C(s)$. 
 
 La división se hace al final y no dentro de `aux`: dividir paso a paso
 promediaría promedios parciales, que no es la suma ponderada entre la masa total.
@@ -634,7 +634,7 @@ Se desea demostrar que $P_W(n) = W(n)$, $P_D(n, \mu) = D_\tau(n)$ y $P_T(n, p, \
 
 ### `trabajo`
 
-$P_W(n) \rightarrow n = W(n)$. $\blacksquare$
+$P_W(n) \rightarrow n = W(n)$. 
 
 ### El árbol de particiones y la conservación del trabajo
 
@@ -655,7 +655,7 @@ La suma de los tamaños de las hojas del árbol de raíz $k$, contadas con repet
 \rfloor$ y $b = k - a$, ambos menores que $k$, de
 modo que la hipótesis de inducción (HI) vale para ellos. Las hojas del árbol
 de $k$ son las hojas del árbol de $a$ junto
-con las del árbol de $b$, así que la suma de sus tamaños es $a + b = k$ por la HI. $\blacksquare$
+con las del árbol de $b$, así que la suma de sus tamaños es $a + b = k$ por la HI. 
 
 El enunciado cuenta una operación por partícula e ignora el costo constante
 de cada partición. Con el Lema 2, los tramos secuenciales suman exactamente $n$ partículas
@@ -689,7 +689,7 @@ Entonces:
 \overset{\text{HI}}{=} 1 + \max\big(D_\tau(a),\ D_\tau(b)\big) = D_\tau(k)
 ```
 
-Por inducción fuerte, el lema vale para todo $k$. $\blacksquare$
+Por inducción fuerte, el lema vale para todo $k$. 
 
 ### `profundidad`
 
@@ -746,7 +746,7 @@ hijos miden a lo sumo $\lceil k/2 \rceil < k \leq \max L_\ell$. Entonces
 $\max L_\ell$ es un natural que decrece estrictamente en cada nivel no vacío, y no
 puede decrecer indefinidamente. Existe un nivel con $L_\ell = \varnothing$, que es un estado final.
 
-Luego $P_D(n, \mu) = D_\tau(n)$. $\blacksquare$
+Luego $P_D(n, \mu) = D_\tau(n)$. 
 
 El lema no pide que la profundidad siga la mitad mayor. Con $n = 11$ y $\tau
 = 5$ las mitades son $5$ y $6$: la de $5$ ya es
@@ -767,7 +767,7 @@ D_\tau(n) + \frac{n}{p} = \widehat{T}(n, p, \mu)
 
 La penúltima igualdad usa el Teorema 1 y $P_W(n) = n$. La conversión
 `toDouble` se hace antes de dividir: con una división entera el resultado
-sería $\lfloor n / p \rfloor$ y se perdería la parte decimal. $\blacksquare$
+sería $\lfloor n / p \rfloor$ y se perdería la parte decimal. 
 
 **Cotas elementales.** Como $D_\tau(n) \geq 0$ y $n/p \geq 0$, para $p \geq 1$
 se cumple
@@ -896,7 +896,7 @@ Se desea demostrar que $P_S(a, b) = S(a, b)$ y que $P_U(s, dt, C) = U(s, dt, C)$
 
 **Teorema 3.** Para $a > 0$ y $b > 0$, $P_S(a, b) = S(a, b)$.
 
-**Demostración.** $P_S(a, b) \rightarrow a / b = S(a, b)$, una división de `Double` entre `Double`, sin recursión ni estado. $\blacksquare$
+**Demostración.** $P_S(a, b) \rightarrow a / b = S(a, b)$, una división de `Double` entre `Double`, sin recursión ni estado. 
 
 La función no hace ninguna llamada recursiva, así que termina en un paso. Se interpreta así: $S > 1$, la versión paralela ganó tiempo; $S = 1$, tardaron lo mismo; $S < 1$, repartir costó más de lo que ahorró.
 
@@ -922,7 +922,7 @@ La invariante dice que $m = \mu_j$ y $\theta = t_j$, es decir, $m$ es el primer 
 2. **Conservación.** Se supone la invariante con $R = \mu_i :: \text{cola}$ y $m = \mu_j$. Como $i$ es mayor que toda posición de $V$, $i > j$.
     * Si $t_i < \theta$: $t_i$ es estrictamente menor que todos los $t_l$ con $l \in V$, porque $\theta \leq t_l$. Entonces $i$ es la única posición de $V \cup \{i\}$ con el tiempo mínimo, y el nuevo estado $(\text{cola},\ \mu_i,\ t_i)$ cumple la invariante.
     * Si $t_i \geq \theta$: el mínimo de $V \cup \{i\}$ sigue siendo $\theta$. Como $i > j$, aunque $t_i = \theta$ la menor posición con ese tiempo sigue siendo $j$. El estado no cambia y la invariante se mantiene.
-3. **Final.** Con $R = \text{Nil}$, $V = \{1, \ldots, k\}$. La invariante dice que $m = \mu_j$ con $j$ la menor posición de menor tiempo, que es $U(s, dt, C)$. $\blacksquare$
+3. **Final.** Con $R = \text{Nil}$, $V = \{1, \ldots, k\}$. La invariante dice que $m = \mu_j$ con $j$ la menor posición de menor tiempo, que es $U(s, dt, C)$. 
 
 ### Terminación
 

@@ -197,3 +197,23 @@ Pasar de 16 a 32 núcleos agregaría 1,4 a la aceleración, menos de lo que se
 ganó entre 4 y 8. En este cálculo esa décima parte está en partir el arreglo y
 combinar los resultados, y en el acceso a una memoria que comparten los
 dieciséis núcleos.
+# Punto 3: estrategia de paralelización
+
+## Estrategia de reparto
+
+Las funciones `energiaParalela` y `centroDeMasaParalelo` dividen recursivamente el intervalo del sistema en dos mitades. La división continúa mientras el tamaño del segmento sea mayor que el umbral recibido.
+
+Cuando un segmento tiene un tamaño menor o igual al umbral, se resuelve secuencialmente. Cuando debe dividirse, las dos llamadas recursivas se ejecutan con la abstracción `parallel`, disponible en el paquete `common`.
+
+Los segmentos izquierdo y derecho son disjuntos y cubren por completo el segmento original. Por tanto, cada partícula participa exactamente una vez en el cálculo.
+
+## Operaciones de combinación
+
+En `energiaParalela`, cada segmento devuelve un valor `Double` que representa su energía parcial. Los valores se combinan mediante la suma, que es asociativa.
+
+En `centroDeMasaParalelo`, cada segmento devuelve una pareja formada por la suma de posiciones ponderadas por masa y la masa total. Las parejas se combinan sumando sus componentes. Esta operación también es asociativa. La división para obtener el centro de masa se realiza una sola vez al final.
+
+## Sobre las mediciones
+
+Este punto implementa el reparto de las magnitudes globales, pero no proporciona por sí solo una tabla de tiempos experimentales. No se deben inventar tiempos ni aceleraciones. La tabla de mediciones exigida por el informe general de paralelización debe completarse con las ejecuciones reales de `App.scala`, de acuerdo con el punto 5 del taller.
+

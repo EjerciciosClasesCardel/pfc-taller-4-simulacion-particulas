@@ -210,12 +210,12 @@ class SimulacionParticulasTest extends AnyFunSuite {
 
   // Pruebas propias del punto 1: mover, pasoSecuencial, pasoSegmento y pasoParalelo.
 
-  test("punto 1: mover admite un dt negativo") {
+  test("mover: admite un dt negativo") {
     val particula = Particula(Vector2(5, -2), Vector2(2, 4), 3.0)
     assert(mover(particula, -0.5).pos == Vector2(4.0, -4.0))
   }
 
-  test("punto 1: pasoSecuencial conserva el orden de las partículas") {
+  test("pasoSecuencial: conserva el orden de las partículas") {
     val sistema = Array(
       Particula(Vector2(1, 0), Vector2(1, 0), 2.0),
       Particula(Vector2(8, 0), Vector2(-1, 0), 4.0))
@@ -223,7 +223,7 @@ class SimulacionParticulasTest extends AnyFunSuite {
     assert(resultado.map(_.pos).toList == List(Vector2(3, 0), Vector2(6, 0)))
   }
 
-  test("punto 1: pasoSegmento calcula un tramo interior") {
+  test("pasoSegmento: calcula un tramo interior") {
     val sistema = Array.tabulate(5) { i =>
       Particula(Vector2(i, 0), Vector2(0, i), 1.0)
     }
@@ -232,7 +232,7 @@ class SimulacionParticulasTest extends AnyFunSuite {
       List(Vector2(1, 2), Vector2(2, 4), Vector2(3, 6)))
   }
 
-  test("punto 1: pasoParalelo funciona con umbral cero y cantidad impar") {
+  test("pasoParalelo: funciona con umbral cero y cantidad impar") {
     val sistema = Array.tabulate(7) { i =>
       Particula(Vector2(i, i), Vector2(i + 1, -i), 1.0)
     }
@@ -241,7 +241,7 @@ class SimulacionParticulasTest extends AnyFunSuite {
     assert(obtenido.toList == esperado.toList)
   }
 
-  test("punto 1: pasoParalelo coincide con pasoSecuencial para dt negativo") {
+  test("pasoParalelo: coincide con pasoSecuencial para dt negativo") {
     val sistema = Array.tabulate(13) { i =>
       Particula(Vector2(i * 2, i), Vector2(i, -1), i + 1.0)
     }
@@ -251,54 +251,53 @@ class SimulacionParticulasTest extends AnyFunSuite {
 
   // Pruebas propias del punto 2: energiaSecuencial, masaTotal y centroDeMasaSecuencial.
 
-  test("punto 2: energiaSecuencial suma velocidades de ambas componentes") {
+  test("energiaSecuencial: suma las velocidades de ambas componentes") {
     val sistema = Array(
       Particula(Vector2(0, 0), Vector2(1, 2), 2.0),
       Particula(Vector2(0, 0), Vector2(0, 3), 1.0))
     assert(cerca(energiaSecuencial(sistema), 9.5))
   }
 
-  test("punto 2: energiaSecuencial ignora la velocidad de una partícula sin masa") {
+  test("energiaSecuencial: ignora la velocidad de una partícula sin masa") {
     val sistema = Array(Particula(Vector2(2, 3), Vector2(20, -8), 0.0))
     assert(energiaSecuencial(sistema) == 0.0)
   }
 
-  test("punto 2: masaTotal suma masas fraccionarias") {
+  test("masaTotal: suma masas fraccionarias") {
     val sistema = Array(
       Particula(Vector2(0, 0), Vector2(0, 0), 0.25),
       Particula(Vector2(0, 0), Vector2(0, 0), 1.75))
     assert(cerca(masaTotal(sistema), 2.0))
   }
 
-  test("punto 2: centroDeMasaSecuencial pondera dos dimensiones") {
+  test("centroDeMasaSecuencial: pondera las dos dimensiones") {
     val sistema = Array(
       Particula(Vector2(-2, 4), Vector2(0, 0), 1.0),
       Particula(Vector2(4, -2), Vector2(0, 0), 2.0))
     assert(cerca(centroDeMasaSecuencial(sistema), Vector2(2.0, 0.0)))
   }
 
-  test("punto 2: centroDeMasaSecuencial devuelve el origen con masa total cero") {
+  test("centroDeMasaSecuencial: devuelve el origen con masa total cero") {
     val sistema = Array(
       Particula(Vector2(10, -5), Vector2(0, 0), 0.0),
       Particula(Vector2(-3, 8), Vector2(1, 1), 0.0))
     assert(centroDeMasaSecuencial(sistema) == Vector2(0, 0))
   }
-
   // Pruebas propias del punto 3: energiaParalela y centroDeMasaParalelo.
 
-  test("punto 3: energiaParalela coincide con la secuencial en un sistema impar") {
+  test("energiaParalela: coincide con la secuencial en un sistema impar") {
     val sistema = Array.tabulate(9) { i =>
       Particula(Vector2(i, 0), Vector2(i, i + 1), i + 0.5)
     }
     assert(cerca(energiaParalela(sistema, 2), energiaSecuencial(sistema)))
   }
 
-  test("punto 3: energiaParalela trabaja con umbral cero") {
+  test("energiaParalela: trabaja con umbral cero") {
     assert(cerca(energiaParalela(grande.take(31), 0),
       energiaSecuencial(grande.take(31))))
   }
 
-  test("punto 3: centroDeMasaParalelo combina masas desiguales") {
+  test("centroDeMasaParalelo: combina masas desiguales") {
     val sistema = Array(
       Particula(Vector2(-4, 3), Vector2(0, 0), 1.0),
       Particula(Vector2(2, -1), Vector2(0, 0), 5.0),
@@ -307,66 +306,69 @@ class SimulacionParticulasTest extends AnyFunSuite {
       centroDeMasaSecuencial(sistema)))
   }
 
-  test("punto 3: centroDeMasaParalelo devuelve el origen si toda masa es cero") {
+  test("centroDeMasaParalelo: devuelve el origen si toda masa es cero") {
     val sistema = Array(
       Particula(Vector2(5, 9), Vector2(0, 0), 0.0),
       Particula(Vector2(-2, 4), Vector2(0, 0), 0.0))
     assert(centroDeMasaParalelo(sistema, 1) == Vector2(0, 0))
   }
 
-  test("punto 3: centroDeMasaParalelo también coincide sin subdividir") {
-    val sistema = Array.tabulate(11) { i =>
-      Particula(Vector2(i, -i), Vector2(0, 0), i + 1.0)
-    }
-    assert(cerca(centroDeMasaParalelo(sistema, sistema.length),
-      centroDeMasaSecuencial(sistema)))
+  test("centroDeMasaParalelo: mitades que no pesan igual") {
+    // Cada mitad tiene promedio 0 y 10; promediarlos daría 5, no 9.
+    val sistema = Array(
+      Particula(Vector2(0, 0), Vector2(0, 0), 1.0),
+      Particula(Vector2(0, 0), Vector2(0, 0), 1.0),
+      Particula(Vector2(10, 0), Vector2(0, 0), 9.0),
+      Particula(Vector2(10, 0), Vector2(0, 0), 9.0))
+    assert(cerca(centroDeMasaParalelo(sistema, 2), Vector2(9.0, 0.0)))
   }
 
   // Pruebas propias del punto 4: trabajo, profundidad y tiempoEstimado.
 
-  test("punto 4: trabajo de un sistema vacío es cero") {
+  test("trabajo: de un sistema vacío es cero") {
     assert(trabajo(0) == 0)
   }
 
-  test("punto 4: trabajo conserva el número de operaciones") {
-    assert(trabajo(257) == 257)
+  test("trabajo: partir el sistema no baja el trabajo") {
+    val n = 257
+    val mitad = n / 2
+    assert(trabajo(mitad) + trabajo(n - mitad) == trabajo(n))
   }
 
-  test("punto 4: profundidad de un tramo vacío es cero") {
+  test("profundidad: de un tramo vacío es cero") {
     assert(profundidad(0, 0) == 0)
   }
 
-  test("punto 4: profundidad considera mitades de tamaños distintos") {
+  test("profundidad: considera mitades de tamaños distintos") {
     assert(profundidad(10, 3) == 5)
   }
 
-  test("punto 4: tiempoEstimado combina profundidad y trabajo") {
+  test("tiempoEstimado: combina profundidad y trabajo") {
     assert(cerca(tiempoEstimado(8, 2, 2), 8.0))
   }
 
   // Pruebas propias del punto 5: aceleracion y umbralConveniente.
 
-  test("punto 5: aceleracion calcula una razón no entera") {
+  test("aceleracion: calcula una razón no entera") {
     assert(cerca(aceleracion(42.0, 14.0), 3.0))
   }
 
-  test("punto 5: aceleracion es cero si el tiempo secuencial es cero") {
+  test("aceleracion: es cero si el tiempo secuencial es cero") {
     assert(aceleracion(0.0, 5.0) == 0.0)
   }
 
-  test("punto 5: umbralConveniente devuelve cero para candidatos vacíos y sistema vacío") {
-    assert(umbralConveniente(vacio, 1.0, Nil) == 0)
+  test("aceleracion: intercambiar los tiempos da el inverso") {
+    assert(cerca(aceleracion(42.0, 14.0) * aceleracion(14.0, 42.0), 1.0))
   }
 
-  test("punto 5: umbralConveniente puede medir un único candidato") {
+  test("umbralConveniente: con un único candidato lo devuelve") {
     val sistema = Array(
       Particula(Vector2(1, 2), Vector2(3, 4), 1.0),
       Particula(Vector2(5, 6), Vector2(7, 8), 2.0))
     assert(umbralConveniente(sistema, 0.5, List(10)) == 10)
   }
 
-  test("punto 5: umbralConveniente selecciona entre los umbrales entregados") {
-    val candidatos = List(1, 4, 20)
-    assert(candidatos.contains(umbralConveniente(s.take(1), 0.1, candidatos)))
+  test("umbralConveniente: con candidatos repetidos devuelve ese valor") {
+    assert(umbralConveniente(grande, 0.5, List(8, 8, 8)) == 8)
   }
 }

@@ -33,22 +33,20 @@ class SimulacionParticulas {
    * Parte el sistema por la mitad con `parallel` mientras el tramo tenga más
    * elementos que el umbral, y por debajo de esa cifra resuelve en secuencial.
    */
-  def pasoParalelo(s: Sistema, dt: Double, umbral: Int): Sistema =
-    if (s.length <= umbral || s.length <= 1) pasoSegmento(s, dt, 0, s.length)
-    else {
-      def avanzar(desde: Int, hasta: Int): Vector[Particula] =
-        if (hasta - desde <= umbral || hasta - desde <= 1)
-          pasoSegmento(s, dt, desde, hasta).toVector
-        else {
-          val mitad = desde + (hasta - desde) / 2
-          val (izquierda, derecha) = parallel(
-            avanzar(desde, mitad),
-            avanzar(mitad, hasta))
-          izquierda ++ derecha
-        }
+  def pasoParalelo(s: Sistema, dt: Double, umbral: Int): Sistema = {
+    def avanzar(desde: Int, hasta: Int): Sistema =
+      if (hasta - desde <= umbral || hasta - desde <= 1)
+        pasoSegmento(s, dt, desde, hasta)
+      else {
+        val mitad = desde + (hasta - desde) / 2
+        val (izquierda, derecha) = parallel(
+          avanzar(desde, mitad),
+          avanzar(mitad, hasta))
+        izquierda ++ derecha
+      }
 
-      avanzar(0, s.length).toArray
-    }
+    avanzar(0, s.length)
+  }
 
   // Punto 2: magnitudes globales ----------------------------------------------
 
@@ -80,10 +78,15 @@ class SimulacionParticulas {
   /** La energía del sistema, repartida con el mismo umbral del punto 1. */
   def energiaParalela(s: Sistema, umbral: Int): Double = {
     def sumar(desde: Int, hasta: Int): Double =
-      if (hasta - desde <= umbral || hasta - desde <= 1)
-        s.slice(desde, hasta).foldLeft(0.0) { (total, p) =>
-          total + 0.5 * p.masa * p.vel.norma * p.vel.norma
-        }
+      if (hasta - desde <= umbral || hasta - desde <= 1) {
+        def acumular(i: Int, total: Double): Double =
+          if (i >= hasta) total
+          else {
+            val v = s(i).vel.norma
+            acumular(i + 1, total + 0.5 * s(i).masa * v * v)
+          }
+        acumular(desde, 0.0)
+      }
       else {
         val mitad = desde + (hasta - desde) / 2
         val (izquierda, derecha) = parallel(
@@ -101,11 +104,12 @@ class SimulacionParticulas {
    */
   def centroDeMasaParalelo(s: Sistema, umbral: Int): Vector2 = {
     def resumir(desde: Int, hasta: Int): (Vector2, Double) =
-      if (hasta - desde <= umbral || hasta - desde <= 1)
-        s.slice(desde, hasta).foldLeft((Vector2(0.0, 0.0), 0.0)) {
-          case ((suma, masaAcumulada), p) =>
-            (suma + p.pos * p.masa, masaAcumulada + p.masa)
-        }
+      if (hasta - desde <= umbral || hasta - desde <= 1) {
+        def acumular(i: Int, suma: Vector2, masaAcumulada: Double): (Vector2, Double) =
+          if (i >= hasta) (suma, masaAcumulada)
+          else acumular(i + 1, suma + s(i).pos * s(i).masa, masaAcumulada + s(i).masa)
+        acumular(desde, Vector2(0.0, 0.0), 0.0)
+      }
       else {
         val mitad = desde + (hasta - desde) / 2
         val (izquierda, derecha) = parallel(

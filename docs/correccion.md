@@ -95,6 +95,126 @@ Por esta razón, la suma ponderada y la masa se pueden repartir en mitades arbit
 $$\frac{\vec{R}_{cm}(A) + \vec{R}_{cm}(B)}{2} \neq \frac{M_A \vec{R}_{cm}(A) + M_B \vec{R}_{cm}(B)}{M_A + M_B} = \vec{R}_{cm}(A \cup B)$$
 
 Nuestra implementación acumula explícitamente la suma ponderada y la masa total, garantizando la consistencia tanto en la versión secuencial como en su posterior extensión concurrente.
+# Punto 3: informe de corrección
+
+## 1. Corrección de `energiaParalela`
+
+Sea un sistema de partículas `s` de tamaño \(n\). La energía cinética total está definida por:
+
+\[
+E(s)=\sum_{i=0}^{n-1}\frac{1}{2}m_i\|\vec v_i\|^2
+\]
+
+La función divide el intervalo inicial \([0,n)\) en dos segmentos cuando su tamaño supera el umbral. Si el punto medio es \(k\), los segmentos son:
+
+\[
+[0,k) \qquad [k,n)
+\]
+
+Estos segmentos son disjuntos y su unión es el intervalo original:
+
+\[
+[0,k)\cap[k,n)=\varnothing
+\]
+
+\[
+[0,k)\cup[k,n)=[0,n)
+\]
+
+Por lo tanto, ninguna partícula se pierde ni se procesa dos veces.
+
+Cada llamada recursiva calcula la suma de energía de su segmento. Los resultados se combinan mediante la suma:
+
+\[
+E(s)=E(s_{izq})+E(s_{der})
+\]
+
+La suma es asociativa:
+
+\[
+(a+b)+c=a+(b+c)
+\]
+
+Por esta propiedad, los resultados parciales pueden combinarse independientemente del orden en que terminen las tareas paralelas. En consecuencia, la función devuelve la misma suma que la versión secuencial, salvo las pequeñas diferencias de redondeo propias de la aritmética de punto flotante.
+
+## 2. Corrección de `centroDeMasaParalelo`
+
+El centro de masa de un sistema se define como:
+
+\[
+CM(s)=
+\frac{\sum_{i=0}^{n-1}m_i\vec p_i}
+{\sum_{i=0}^{n-1}m_i}
+\]
+
+si la masa total es distinta de cero. Si la masa total es cero, el resultado es el vector origen.
+
+Para repartir el cálculo, cada segmento no devuelve directamente su centro de masa. Devuelve el par:
+
+\[
+R(s)=(W(s),M(s))
+\]
+
+donde:
+
+\[
+W(s)=\sum_{i\in s}m_i\vec p_i
+\]
+
+\[
+M(s)=\sum_{i\in s}m_i
+\]
+
+Para dos segmentos disjuntos \(A\) y \(B\), la operación de combinación es:
+
+\[
+(W_A,M_A)\oplus(W_B,M_B)
+=(W_A+W_B,M_A+M_B)
+\]
+
+Esta operación es asociativa porque la suma de vectores y la suma de números reales son asociativas:
+
+\[
+((W_A,M_A)\oplus(W_B,M_B))\oplus(W_C,M_C)
+\]
+
+\[
+=(W_A+W_B+W_C,\ M_A+M_B+M_C)
+\]
+
+\[
+=(W_A,M_A)\oplus((W_B,M_B)\oplus(W_C,M_C))
+\]
+
+La división se realiza una sola vez, después de combinar todos los segmentos:
+
+\[
+CM(s)=
+\begin{cases}
+(0,0), & M(s)=0\\
+W(s)\cdot\frac{1}{M(s)}, & M(s)\ne 0
+\end{cases}
+\]
+
+Así se obtiene el mismo centro de masa que en la definición secuencial.
+
+## 3. Por qué no se pueden promediar los centros parciales
+
+Los centros parciales no se pueden promediar directamente porque cada segmento puede tener una masa diferente. Un promedio simple asignaría el mismo peso a ambos segmentos, aunque uno contenga más masa que el otro.
+
+Por ejemplo, si un segmento tiene masa \(3\) y suma ponderada \(W_A\), y el otro tiene masa \(5\) y suma ponderada \(W_B\), el centro correcto es:
+
+\[
+CM=\frac{W_A+W_B}{3+5}
+\]
+
+No es, en general:
+
+\[
+\frac{1}{2}\left(\frac{W_A}{3}+\frac{W_B}{5}\right)
+\]
+
+Por eso se combinan primero las sumas ponderadas y las masas, y se divide al final.
 
 ## Punto 4: Trabajo y profundidad
 

@@ -84,24 +84,93 @@ class SimulacionParticulas {
   // Punto 3: las mismas magnitudes en paralelo --------------------------------
 
   /** La energía del sistema, repartida con el mismo umbral del punto 1. */
-  def energiaParalela(s: Sistema, umbral: Int): Double = ???
+  def energiaParalela(s: Sistema, umbral: Int): Double = {
+
+    val limite = math.max(1, umbral)
+
+    def sumar(desde: Int, hasta: Int): Double = {
+      if (hasta - desde <= limite) {
+        (desde until hasta).foldLeft((0.0)) {
+          (energia, i) =>
+            val p = s(i)
+            val rapidez = p.vel.norma
+            energia + 0.5 * p.masa * rapidez * rapidez
+        }
+      }
+      else {
+        val medio = desde + (hasta - desde) / 2
+        val (izquierda, derecha) = parallel(sumar(desde, medio), sumar(medio, hasta))
+
+        izquierda + derecha
+
+      }
+    }
+     sumar(0, s.length)
+  }
 
   /**
    * El centro de masa, repartido. Promediar los promedios de cada mitad da
    * otra cosa cuando las dos mitades no pesan igual.
    */
-  def centroDeMasaParalelo(s: Sistema, umbral: Int): Vector2 = ???
+  def centroDeMasaParalelo(s: Sistema, umbral: Int): Vector2 = {
+
+    val limite = math.max(1, umbral)
+    val origen = Vector2(0.0, 0.0)
+
+    def sumar(desde: Int, hasta:Int): (Vector2, Double) = {
+      if(hasta - desde <= limite) {
+        (desde until hasta).foldLeft((origen, 0.0)) {
+          case((ponderada, masa), i) => val p = s(i)
+            (ponderada + p.pos * p.masa, masa + p.masa)
+        }
+      }
+      else {
+        val medio = desde + (hasta - desde) / 2
+        val ((posicionIzquierda, masaIzquierda), (posicionDerecha, masaDerecha)) =
+          parallel(sumar(desde,medio), sumar(medio, hasta))
+
+        (posicionIzquierda + posicionDerecha, masaIzquierda + masaDerecha)
+      }
+    }
+
+    val (ponderada, masa) = sumar(0, s.length)
+
+    if (masa == 0.0 ) origen
+    else Vector2(ponderada.x / masa, ponderada.y / masa)
+  }
 
   // Punto 4: trabajo y profundidad --------------------------------------------
 
   /** El número total de operaciones, una por partícula. */
-  def trabajo(n: Int): Int = ???
+  def trabajo(n: Int): Int = n
 
   /** Cuántas veces se parte a la mitad, más el tramo que queda sin partir. */
-  def profundidad(n: Int, umbral: Int): Int = ???
+  def profundidad(n: Int, umbral: Int): Int = {
+
+    val limite = math.max(1, umbral)
+
+    def profundidadNivel(tramos: Int, particiones: Int): Int = {
+    val menor = n / tramos
+    val mayor = menor + (if (n % tramos == 0) 0 else 1)
+
+    if (mayor <= limite) particiones + mayor
+    else if (menor <= limite) {
+      val mitadDelMayor = mayor - mayor / 2
+      particiones + math.max(menor, 1 + mitadDelMayor)
+    }
+    else {
+      profundidadNivel(tramos * 2, particiones + 1)
+    }
+    }
+    profundidadNivel(1, 0)
+  }
 
   /** La profundidad más el trabajo entre p procesadores. */
-  def tiempoEstimado(n: Int, p: Int, umbral: Int): Double = ???
+  def tiempoEstimado(n: Int, p: Int, umbral: Int): Double = {
+
+    profundidad(n, umbral) + trabajo(n).toDouble / p
+
+  }
 
   // Punto 5: medir la aceleración ---------------------------------------------
 

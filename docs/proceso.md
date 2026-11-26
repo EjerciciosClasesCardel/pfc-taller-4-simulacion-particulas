@@ -1,131 +1,68 @@
-# Algoritmo Factorial con Recursión de Cola
+# Informe de proceso
 
-## Definición del Algoritmo
+Usamos tres partículas con índices $0,1,2$ y un paso $dt=0.5$.
 
-```Scala
-def factorial(n: Int): BigInt = {
-  @annotation.tailrec
-  def loop(x: Int, acumulador: BigInt): BigInt = {
-    if (x <= 1) acumulador
-    else loop(x - 1, acumulador * x)
-  }
-  loop(n, 1)
-}
-```
+| Índice | Posición | Velocidad | Masa |
+| ---: | --- | --- | ---: |
+| 0 | $(1,-1)$ | $(2,0)$ | 1 |
+| 1 | $(4,2)$ | $(0,-2)$ | 2 |
+| 2 | $(-2,3)$ | $(-2,2)$ | 3 |
 
-* La función `factorial` calcula el factorial de un número `n` utilizando **recursión de cola**.
-* La función interna `loop` es la que hace la recursión:
+## Punto 1. Avance
 
-  * Recibe dos parámetros:
+`mover` multiplica la velocidad por $dt$, suma el desplazamiento a la posición y copia la partícula con la posición nueva. Para la primera obtiene $(1,-1)+(1,0)=(2,-1)$.
 
-    * `x`: el valor actual decreciente hasta llegar a 1.
-    * `acumulador`: donde se guarda el resultado parcial en cada paso.
-* El decorador `@annotation.tailrec` obliga a que la función sea optimizada como recursión de cola, es decir, **no se acumulan llamados en la pila**.
+`pasoSegmento(s, 0.5, 1, 3)` crea dos celdas. Las celdas $0$ y $1$ de la salida leen los índices $1$ y $2$ de la entrada y guardan las partículas movidas a $(4,1)$ y $(-3,4)$. `pasoSecuencial` llama al mismo cálculo para $[0,3)$ y obtiene las tres posiciones en ese orden.
 
-## Explicación paso a paso
-
-### Caso base
-
-```Scala
-if (x <= 1) acumulador
-```
-
-Cuando `x` llega a `1`, la función retorna directamente el valor acumulado, evitando más llamadas.
-
-### Caso recursivo
-
-```Scala
-loop(x - 1, acumulador * x)
-```
-
-En cada llamada:
-
-* Se reduce el valor de `x` en 1.
-* Se multiplica el acumulador por `x` y se pasa a la siguiente iteración.
-* Como es recursión de cola, la llamada recursiva es la **última instrucción** en ejecutarse, lo que permite a Scala optimizar la pila.
-
----
-
-## Llamados de pila en recursión de cola
-
-Ejemplo:
-
-```Scala
-factorial(5)
-```
-
-### Paso 1: Llamada inicial
-
-```Scala
-loop(5, 1)
-```
-
-### Paso 2: Primera iteración
-
-```Scala
-loop(4, 5)   // acumulador = 1 * 5
-```
-
-### Paso 3: Segunda iteración
-
-```Scala
-loop(3, 20)  // acumulador = 5 * 4
-```
-
-### Paso 4: Tercera iteración
-
-```Scala
-loop(2, 60)  // acumulador = 20 * 3
-```
-
-### Paso 5: Cuarta iteración
-
-```Scala
-loop(1, 120) // acumulador = 60 * 2
-```
-
-### Paso 6: Caso base
-
-```Scala
-return 120
-```
-
----
-
-## Diferencia con recursión normal
-
-* En **recursión normal** cada llamada queda en la pila esperando a que termine la siguiente, lo que puede causar desbordamiento si `n` es muy grande.
-* En **recursión de cola**, el compilador transforma el proceso en un **bucle optimizado**, por lo que no se guarda cada llamada en la pila y el algoritmo puede ejecutarse para valores muy grandes sin problema.
-
----
-
-## Ejemplo de uso
-
-```Scala
-val resultado = factorial(5)
-println(resultado)  // 120
-```
-
-El resultado de `factorial(5)` es `120`.
-
-
-## Diagrama de llamados de pila con recursión de cola
+`pasoParalelo(s, 0.5, 1)` divide en el índice $1$ y luego divide el tramo derecho en el índice $2$. Cada hoja llama a `pasoSegmento`. Cada llamada a `parallel` devuelve el par de resultados y la concatenación coloca el tramo izquierdo primero. Con umbral $3$ se ejecuta directamente `pasoSecuencial`.
 
 ```mermaid
-sequenceDiagram
-    participant Main as factorial(5)
-    participant L1 as loop(5, 1)
-    participant L2 as loop(4, 5)
-    participant L3 as loop(3, 20)
-    participant L4 as loop(2, 60)
-    participant L5 as loop(1, 120)
-
-    Main->>L1: llamada inicial
-    L1->>L2: tail call con (4, 5)
-    L2->>L3: tail call con (3, 20)
-    L3->>L4: tail call con (2, 60)
-    L4->>L5: tail call con (1, 120)
-    L5-->>Main: return 120
+flowchart TD
+    A["[0, 3)"] -->|mitad izquierda| B["[0, 1) → (2, −1)"]
+    A -->|mitad derecha| C["[1, 3)"]
+    C --> D["[1, 2) → (4, 1)"]
+    C --> E["[2, 3) → (−3, 4)"]
 ```
 
+La combinación empieza por el nodo derecho. Este devuelve las posiciones
+$[(4,1),(-3,4)]$. La raíz antepone la salida del nodo izquierdo y devuelve
+$[(2,-1),(4,1),(-3,4)]$, con las velocidades y masas de entrada.
 
+## Punto 2. Magnitudes secuenciales
+
+`energiaSecuencial` y `centroDeMasaSecuencial` fijan el umbral en $n$ y
+resuelven el tramo entero en una hoja. `masaTotal` usa `foldLeft`. Los tres
+recorridos acumulan de izquierda a derecha sobre las partículas de entrada.
+
+| Índice procesado | Energía acumulada | Masa acumulada | Suma de posiciones ponderadas |
+| ---: | ---: | ---: | --- |
+| Inicio | 0 | 0 | $(0,0)$ |
+| 0 | 2 | 1 | $(1,-1)$ |
+| 1 | 6 | 3 | $(9,3)$ |
+| 2 | 18 | 6 | $(3,12)$ |
+
+Las rapideces al cuadrado son $4$, $4$ y $8$. Al terminar, `energiaSecuencial`
+devuelve $18$, `masaTotal` devuelve $6$ y `centroDeMasaSecuencial` divide cada
+coordenada de $(3,12)$ por $6$ para obtener $(0.5,2)$. Si la masa acumulada
+es cero, devuelve el origen.
+
+## Punto 3. Magnitudes paralelas
+
+Con umbral $1$ los dos reductores usan el árbol de arriba. `energiaParalela` obtiene $2$, $4$ y $12$ en las hojas. El tramo derecho suma $4+12=16$ y la raíz suma $2+16=18$.
+
+`centroDeMasaParalelo` emite en las hojas $((1,-1),1)$, $((8,4),2)$ y $((-6,9),3)$. La rama derecha combina sus hojas en $((2,13),5)$ y la raíz combina ambos resultados en $((3,12),6)$. La división final vuelve a dar $(0.5,2)$.
+
+## Punto 4. Modelo de coste
+
+`trabajo(3)` devuelve $3$. Con umbral $1$, `profundidad(3,1)` parte del nivel $0$ con longitud $3$. En el nivel $1$ hay longitudes $1$ y $2$. La primera ya es hoja y aporta $1+1=2$. La segunda se divide y sus hojas aportan $2+1=3$. La profundidad es el máximo, $3$. `tiempoEstimado(3,2,1)` suma $3+3/2=4.5$.
+
+Con $11$ partículas y umbral $5$, el primer corte deja tramos de $5$ y $6$.
+El de $5$ termina en el nivel $1$ con coste $1+5=6$. El de $6$ se divide en
+dos hojas de $3$, cada una con coste $2+3=5$. En este caso la profundidad
+es $6$ y corresponde a la rama que termina antes.
+
+## Punto 5. Medición
+
+`medir` pide a ScalaMeter calentar y medir el cuerpo en cada repetición. Ordena los tiempos y toma el elemento central. Si en tres repeticiones las muestras fueran $8,10,9$ ms, devolvería $9$ ms. `aceleracion(9,6)` divide y devuelve $1.5$. `umbralConveniente` mide cada candidato tres veces y selecciona el de menor mediana. Si los umbrales $1$ y $2$ dieran $11$ y $7$ ms, elegiría $2$. Con una lista vacía devuelve $3$ para este sistema.
+
+`App` prepara cada arreglo fuera del bloque medido y compara ambos avances. En el control alterna cuál se mide primero y calcula las medianas por separado. Los tiempos de la ejecución están en [el informe de paralelización](paralelizacion.md).

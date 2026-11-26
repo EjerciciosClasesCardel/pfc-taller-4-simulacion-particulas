@@ -104,11 +104,12 @@ class SimulacionParticulas {
    */
   def centroDeMasaParalelo(s: Sistema, umbral: Int): Vector2 = {
     def resumir(desde: Int, hasta: Int): (Vector2, Double) =
-      if (hasta - desde <= umbral || hasta - desde <= 1)
-        s.slice(desde, hasta).foldLeft((Vector2(0.0, 0.0), 0.0)) {
-          case ((suma, masaAcumulada), p) =>
-            (suma + p.pos * p.masa, masaAcumulada + p.masa)
-        }
+      if (hasta - desde <= umbral || hasta - desde <= 1) {
+        def acumular(i: Int, suma: Vector2, masaAcumulada: Double): (Vector2, Double) =
+          if (i >= hasta) (suma, masaAcumulada)
+          else acumular(i + 1, suma + s(i).pos * s(i).masa, masaAcumulada + s(i).masa)
+        acumular(desde, Vector2(0.0, 0.0), 0.0)
+      }
       else {
         val mitad = desde + (hasta - desde) / 2
         val (izquierda, derecha) = parallel(

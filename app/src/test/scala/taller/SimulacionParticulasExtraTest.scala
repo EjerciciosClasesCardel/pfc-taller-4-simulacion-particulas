@@ -35,6 +35,22 @@ class SimulacionParticulasExtraTest extends AnyFunSuite {
   val enormes: Sistema = Array.tabulate(100000)(i =>
     Particula(Vector2(i, -i), Vector2(1, 2), 1.0))
 
+  // El sistema de cinco partículas del informe de proceso (e5).
+  val cinco: Sistema = Array(
+    Particula(Vector2(0, 0), Vector2(1, 0), 1.0),
+    Particula(Vector2(1, 1), Vector2(-1, 2), 2.0),
+    Particula(Vector2(5, -2), Vector2(0.5, 0.5), 3.0),
+    Particula(Vector2(-3, 4), Vector2(2, -2), 4.0),
+    Particula(Vector2(2, 2), Vector2(0, -1), 2.0))
+
+  // Sistema aleatorio propio de los puntos 3 y 4: 777 partículas (impar),
+  // otra semilla, para no duplicar los casos de `aleatorio`.
+  val azar2 = new Random(2026)
+  val disperso: Sistema = Array.fill(777)(Particula(
+    Vector2(azar2.nextDouble() * 40 - 20, azar2.nextDouble() * 40 - 20),
+    Vector2(azar2.nextDouble() * 6 - 3, azar2.nextDouble() * 6 - 3),
+    azar2.nextDouble() * 8 + 0.5))
+
   // Punto 1 -------------------------------------------------------------------
 
   test("mover: con dt negativo la partícula retrocede") {
@@ -204,5 +220,110 @@ class SimulacionParticulasExtraTest extends AnyFunSuite {
     val xs = aleatorio.map(_.pos.x)
     val ys = aleatorio.map(_.pos.y)
     assert(c.x >= xs.min && c.x <= xs.max && c.y >= ys.min && c.y <= ys.max)
+  }
+
+  // Punto 3 -------------------------------------------------------------------
+
+  test("energiaParalela: coincide con la secuencial en el sistema del informe") {
+    assert(cerca(energiaParalela(cinco, 2), energiaSecuencial(cinco)))
+    assert(cerca(energiaParalela(cinco, 2), 23.25))
+    assert(cerca(energiaParalela(cinco, 1), energiaSecuencial(cinco)))
+  }
+
+  test("energiaParalela: coincide con la secuencial en un sistema aleatorio impar") {
+    val esperado = energiaSecuencial(disperso)
+    assert(List(1, 2, 10, 500, 777, 5000).forall(u =>
+      cerca(energiaParalela(disperso, u), esperado)))
+  }
+
+  test("energiaParalela: agrupar las sumas de otra forma no cambia el valor") {
+    // Umbral = tamaño: un solo grupo. Umbral 1: 777 grupos de uno. La suma
+    // es asociativa, así que salvo redondeo dan lo mismo.
+    assert(cerca(energiaParalela(disperso, disperso.length), energiaParalela(disperso, 1)))
+  }
+
+  test("energiaParalela: una sola partícula y velocidades duplicadas") {
+    val una = Array(cinco(3)) // masa 4, velocidad (2, -2): 16.0
+    assert(cerca(energiaParalela(una, 1), 16.0))
+    val rapidas = disperso.map(q => Particula(q.pos, q.vel * 2.0, q.masa))
+    val esperado = 4.0 * energiaSecuencial(disperso)
+    assert(Math.abs(energiaParalela(rapidas, 32) - esperado) < 1e-6 * esperado)
+  }
+
+  test("energiaParalela: cero partículas da cero, con cualquier umbral") {
+    assert(List(0, 1, 100).forall(u => energiaParalela(Array[Particula](), u) == 0.0))
+  }
+
+  test("centroDeMasaParalelo: coincide con la secuencial en el sistema del informe") {
+    assert(cerca(centroDeMasaParalelo(cinco, 2), centroDeMasaSecuencial(cinco)))
+    assert(cerca(centroDeMasaParalelo(cinco, 2), Vector2(0.75, 4.0 / 3.0)))
+    assert(cerca(centroDeMasaParalelo(cinco, 1), centroDeMasaSecuencial(cinco)))
+  }
+
+  test("centroDeMasaParalelo: coincide con la secuencial en el sistema aleatorio impar") {
+    val esperado = centroDeMasaSecuencial(disperso)
+    assert(List(1, 2, 10, 500, 777, 5000).forall(u =>
+      cerca(centroDeMasaParalelo(disperso, u), esperado)))
+  }
+
+  test("centroDeMasaParalelo: con mitades de masas 3 y 9, la suma da el centro y el promedio de promedios no") {
+    // Mitad [0,2): centro (2/3, 2/3) con masa 3. Mitad [2,5): centro
+    // (7/9, 14/9) con masa 9. El promedio de los dos promedios es
+    // (13/18, 10/9); el centro correcto es ((2,2)+(7,14))/12 = (3/4, 4/3).
+    val suma = centroDeMasaParalelo(cinco, 2)
+    assert(cerca(suma, Vector2(0.75, 4.0 / 3.0)))
+    val promedioDePromedios = Vector2(13.0 / 18.0, 10.0 / 9.0)
+    assert(!cerca(suma, promedioDePromedios))
+  }
+
+  test("centroDeMasaParalelo: sistema no vacío sin masa da el origen") {
+    val sinMasa: Sistema = Array(
+      Particula(Vector2(9, 9), Vector2(1, 1), 0.0),
+      Particula(Vector2(-4, 3), Vector2(1, 1), 0.0),
+      Particula(Vector2(15, 1), Vector2(1, 1), 0.0))
+    assert(centroDeMasaParalelo(sinMasa, 1) == Vector2(0, 0))
+  }
+
+  test("centroDeMasaParalelo: trasladar las partículas traslada el centro") {
+    val d = Vector2(-7, 12)
+    val movidas = disperso.map(q => Particula(q.pos + d, q.vel, q.masa))
+    assert(cerca(centroDeMasaParalelo(movidas, 64), centroDeMasaSecuencial(disperso) + d))
+  }
+
+  // Punto 4 -------------------------------------------------------------------
+
+  test("trabajo: una operación por partícula, también en los extremos") {
+    assert(trabajo(1) == 1 && trabajo(0) == 0 && trabajo(2048) == 2048)
+  }
+
+  test("profundidad: tamaños que no son potencia de dos") {
+    assert(profundidad(1000, 1000) == 1000)
+    assert(profundidad(1000, 500) == 501)
+    assert(profundidad(1000, 250) == 252)
+    assert(profundidad(64, 8) == 11)
+  }
+
+  test("profundidad: con tamaño impar sigue el camino de la mitad mayor") {
+    // 7 -> 4 -> 2 -> 1: tres particiones y un tramo de uno. Y para el árbol
+    // de pasoParalelo(e5, ., 2) del informe, que tiene 3 hojas y 2
+    // particiones con hoja mayor de tamaño 2: 2 + 2 = 4.
+    assert(profundidad(7, 1) == 4 && profundidad(5, 2) == 4)
+  }
+
+  test("profundidad: con umbral cero no se queda sin fondo") {
+    // 4 -> 2 -> 1: dos particiones y un tramo de uno.
+    assert(profundidad(4, 0) == 3 && profundidad(1, 0) == 1)
+  }
+
+  test("tiempoEstimado: profundidad más trabajo entre procesadores") {
+    assert(cerca(tiempoEstimado(1000, 2, 500), 1001.0))
+    assert(cerca(tiempoEstimado(1000, 10, 1), 111.0))
+    assert(cerca(tiempoEstimado(1000, 1, 1), 1011.0))
+  }
+
+  test("tiempoEstimado: mejora al agregar procesadores y nunca baja de la profundidad") {
+    val estimados = List(1, 2, 4, 8, 16).map(p => tiempoEstimado(1000, p, 1))
+    assert(estimados.zip(estimados.tail).forall { case (a, b) => a >= b })
+    assert(estimados.forall(_ >= profundidad(1000, 1)))
   }
 }

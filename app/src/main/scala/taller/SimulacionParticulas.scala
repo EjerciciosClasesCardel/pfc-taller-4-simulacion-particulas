@@ -2,6 +2,7 @@ package taller
 
 import common._
 import org.scalameter._
+import scala.annotation.tailrec
 
 /**
  * Taller 4 — simulación de partículas repartida entre varios núcleos.
@@ -96,24 +97,71 @@ class SimulacionParticulas {
   // Punto 3: las mismas magnitudes en paralelo --------------------------------
 
   /** La energía del sistema, repartida con el mismo umbral del punto 1. */
-  def energiaParalela(s: Sistema, umbral: Int): Double = ???
+  def energiaParalela(s: Sistema, umbral: Int): Double = {
+    @tailrec
+    def hoja(i: Int, hasta: Int, acc: Double): Double =
+      if (i >= hasta) acc
+      else {
+        val v = s(i).vel.norma
+        hoja(i + 1, hasta, acc + 0.5 * s(i).masa * v * v)
+      }
+
+    def aux(desde: Int, hasta: Int): Double =
+      if (hasta - desde <= umbral || hasta - desde <= 1)
+        hoja(desde, hasta, 0.0)
+      else {
+        val m = desde + (hasta - desde) / 2
+        val (e1, e2) = parallel(aux(desde, m), aux(m, hasta))
+        e1 + e2
+      }
+
+    aux(0, s.length)
+  }
 
   /**
    * El centro de masa, repartido. Promediar los promedios de cada mitad da
    * otra cosa cuando las dos mitades no pesan igual.
    */
-  def centroDeMasaParalelo(s: Sistema, umbral: Int): Vector2 = ???
+  def centroDeMasaParalelo(s: Sistema, umbral: Int): Vector2 = {
+    @tailrec
+    def hoja(i: Int, hasta: Int, ponderada: Vector2, masa: Double): (Vector2, Double) =
+      if (i >= hasta) (ponderada, masa)
+      else hoja(i + 1, hasta, ponderada + s(i).pos * s(i).masa, masa + s(i).masa)
 
+    def aux(desde: Int, hasta: Int): (Vector2, Double) =
+      if (hasta - desde <= umbral || hasta - desde <= 1)
+        hoja(desde, hasta, Vector2(0, 0), 0.0)
+      else {
+        val m = desde + (hasta - desde) / 2
+        val ((pi, mi), (pd, md)) = parallel(aux(desde, m), aux(m, hasta))
+        (pi + pd, mi + md)
+      }
+
+    val (ponderada, masa) = aux(0, s.length)
+    if (masa == 0.0) Vector2(0, 0)
+    else Vector2(ponderada.x / masa, ponderada.y / masa)
+  }
   // Punto 4: trabajo y profundidad --------------------------------------------
 
   /** El número total de operaciones, una por partícula. */
-  def trabajo(n: Int): Int = ???
+  def trabajo(n: Int): Int = n
+
+  /**
+   * Cuántas veces se parte a la mitad, más el tramo que queda sin partir.
+   *
+   * La mitad que se sigue partiendo es la mayor, `n - n/2`, que es la que
+   * fija el camino más largo; con umbral 0 o negativo vale 1, igual que en
+   * `pasoParalelo`.
+   */
 
   /** Cuántas veces se parte a la mitad, más el tramo que queda sin partir. */
-  def profundidad(n: Int, umbral: Int): Int = ???
+  def profundidad(n: Int, umbral: Int): Int =
+    if (n <= umbral || n <= 1) n
+    else 1 + profundidad(n - n / 2, umbral)
 
   /** La profundidad más el trabajo entre p procesadores. */
-  def tiempoEstimado(n: Int, p: Int, umbral: Int): Double = ???
+  def tiempoEstimado(n: Int, p: Int, umbral: Int): Double =
+    profundidad(n, umbral) + trabajo(n).toDouble / p
 
   // Punto 5: medir la aceleración ---------------------------------------------
 

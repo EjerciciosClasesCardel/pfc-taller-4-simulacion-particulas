@@ -1,91 +1,95 @@
-# Suma de potencias sobre un arreglo, repartida con `parallel`
+
+# Simulación de partículas repartida con `parallel`
 
 ## El cálculo
 
-`sumSegment` recorre un tramo del arreglo y acumula la potencia `p` de cada
-elemento. Es una recursión de cola con acumulador.
+`pasoSegmento` recorre un tramo del sistema y actualiza la posición de cada partícula mediante la función `mover`. Para construir el arreglo resultante se utiliza `Array.tabulate`.
 
-```Scala
-def power(x: Int, p: Double): Double =
-  math.pow(math.abs(x.toDouble), p)
+```scala
+def mover(p: Particula, dt: Double): Particula =
+  p.copy(pos = p.pos + p.vel * dt)
 
-def sumSegment(a: Array[Int], p: Double, s: Int, t: Int): Double = {
-  def aux(i: Int, acc: Double): Double =
-    if (i >= t) acc
-    else aux(i + 1, acc + power(a(i), p))
-  aux(s, 0.0)
+def pasoSegmento(s: Sistema, dt: Double, desde: Int, hasta: Int): Sistema =
+  Array.tabulate(hasta - desde)(i => mover(s(desde + i), dt))
+```
+
+En notación matemática, la posición de cada partícula después de un intervalo de tiempo se calcula mediante:
+```math
+\vec{r}_i(t+\Delta t)=\vec{r}_i(t)+\vec{v}_i\Delta t
+```
+
+El cálculo se realiza sobre el tramo entre `desde` incluido y `hasta` excluido, manteniendo la masa y la velocidad de cada partícula.
+
+Sobre ese cálculo existen dos versiones. La versión secuencial procesa todo el sistema en un solo tramo, mientras que la versión paralela divide el sistema por la mitad mientras su tamaño supere el umbral establecido.
+
+```scala
+def pasoSecuencial(s: Sistema, dt: Double): Sistema =
+  pasoSegmento(s, dt, 0, s.length)
+
+def pasoParalelo(s: Sistema, dt: Double, umbral: Int): Sistema = {
+  def avanzar(desde: Int, hasta: Int): Sistema =
+    if (hasta - desde <= umbral || hasta - desde <= 1)
+      pasoSegmento(s, dt, desde, hasta)
+    else {
+      val mitad = desde + (hasta - desde) / 2
+      val (izquierda, derecha) = parallel(
+        avanzar(desde, mitad),
+        avanzar(mitad, hasta))
+      izquierda ++ derecha
+    }
+
+  avanzar(0, s.length)
 }
 ```
+La diferencia entre ambas versiones es la estrategia de ejecución. Mientras que `pasoSecuencial` procesa todas las partículas de manera consecutiva, `pasoParalelo` distribuye el trabajo mediante `parallel` y posteriormente concatena los resultados parciales utilizando el operador `++`.
 
-En notación matemática, con el tramo entre `s` incluido y `t` excluido:
-
-```math
-\text{sumSegment}(a, p, s, t) = \sum_{i=s}^{t-1} |a_i|^{\,p}
-```
-
-Sobre ese cálculo hay dos versiones que dividen el tramo a la mitad mientras
-pase del umbral. La diferencia entre las dos es una línea: dónde una resuelve
-las dos mitades una tras otra, la otra las entrega a `parallel`.
-
-```Scala
-def segmentRecSec(a: Array[Int], p: Double, s: Int, t: Int, umbral: Int): Double =
-  if (t - s <= umbral) sumSegment(a, p, s, t)
-  else {
-    val m = s + (t - s) / 2
-    val sum1 = segmentRecSec(a, p, s, m, umbral)
-    val sum2 = segmentRecSec(a, p, m, t, umbral)
-    sum1 + sum2
-  }
-
-def segmentRecPar(a: Array[Int], p: Double, s: Int, t: Int, umbral: Int): Double =
-  if (t - s <= umbral) sumSegment(a, p, s, t)
-  else {
-    val m = s + (t - s) / 2
-    val (sum1, sum2) = parallel(
-      segmentRecPar(a, p, s, m, umbral),
-      segmentRecPar(a, p, m, t, umbral))
-    sum1 + sum2
-  }
-```
+Ambas versiones producen un sistema con las mismas partículas actualizadas y conservan su orden original.
 
 ## La estrategia de reparto
 
-El tramo se parte por la mitad en `m`, y cada mitad se resuelve sin mirar la
-otra: ningún índice aparece en las dos y ninguno se queda por fuera, porque un
-tramo va de `s` a `m` y el otro de `m` a `t`. Por debajo del umbral ya no se
-parte y el tramo se resuelve con `sumSegment`.
 
-Lo que combina los resultados parciales es la suma, y la suma es asociativa:
+## La estrategia de reparto
+
+El tramo se parte por la mitad en `mitad`, y cada parte se resuelve de manera independiente, ya que el movimiento de una partícula no depende de las demás. Ningún índice aparece en ambos tramos y ninguno queda por fuera, porque el primero va desde `desde` hasta `mitad` y el segundo desde `mitad` hasta `hasta`, excluyendo el límite superior de cada tramo.
+
+Cuando el tamaño del tramo es menor o igual al umbral, o contiene como máximo una partícula, ya no se divide y se resuelve secuencialmente mediante `pasoSegmento`.
+
+Lo que combina los resultados parciales es la concatenación de arreglos mediante el operador `++`, que es una operación asociativa:
 
 ```math
-\left(\sum_{i=s}^{m-1} |a_i|^{\,p}\right) + \left(\sum_{i=m}^{t-1} |a_i|^{\,p}\right)
-= \sum_{i=s}^{t-1} |a_i|^{\,p}
+(A \mathbin{++} B) \mathbin{++} C = A \mathbin{++} (B \mathbin{++} C)
 ```
 
-Por eso el orden en que terminen las dos mitades no cambia el resultado, y por
-eso se pueden repartir. El árbol de llamados para un arreglo de ocho elementos
-con umbral 2 queda así, con las hojas resolviendo en secuencial:
+Por lo tanto, el procesamiento de un tramo completo equivale a procesar sus dos mitades y concatenar los resultados:
+
+```math
+P_{[d,h)} = P_{[d,m)} \mathbin{++} P_{[m,h)}
+```
+
+Donde `d` representa el índice inicial, `m` el punto medio y `h` el índice final del tramo.
+
+El orden en que terminan las tareas no modifica el resultado, siempre que se concatene primero el tramo izquierdo y después el derecho. De esta manera se conserva el orden original de las partículas.
+
+El árbol de llamados para un sistema de ocho partículas con umbral 2 queda así, con las hojas resolviendo en secuencial:
 
 ```mermaid
 graph TD
     A["0 a 8: parallel"] --> B["0 a 4: parallel"]
     A --> C["4 a 8: parallel"]
-    B --> D["0 a 2: sumSegment"]
-    B --> E["2 a 4: sumSegment"]
-    C --> F["4 a 6: sumSegment"]
-    C --> G["6 a 8: sumSegment"]
+    B --> D["0 a 2: pasoSegmento"]
+    B --> E["2 a 4: pasoSegmento"]
+    C --> F["4 a 6: pasoSegmento"]
+    C --> G["6 a 8: pasoSegmento"]
 ```
+
 
 ## Cómo se tomaron los tiempos
 
-Cada cifra sale de ScalaMeter, la librería con que mide el curso:
-`withWarmer(new Warmer.Default) measure { ... }` ejecuta el bloque hasta que la
-máquina virtual se estabiliza y solo entonces mide, porque las primeras
-corridas miden una versión del programa que el compilador interno todavía está
-optimizando. Cada tiempo es la mediana de cinco mediciones y al lado va la
-desviación de esas cinco, que dice cuánto se movió el reloj de una a otra.
+Cada cifra se obtiene mediante ScalaMeter, la librería utilizada en el curso para medir el rendimiento de los algoritmos. La expresión `withWarmer(new Warmer.Default) measure { ... }` realiza un calentamiento previo de la máquina virtual antes de tomar las mediciones, reduciendo la influencia de las optimizaciones iniciales del compilador.
 
-```Scala
+Cada tiempo registrado corresponde a la mediana de cinco mediciones, con el propósito de reducir la influencia de valores extremos.
+
+```scala
 import org.scalameter._
 
 def medir[A](repeticiones: Int)(cuerpo: => A): Double = {
@@ -94,106 +98,117 @@ def medir[A](repeticiones: Int)(cuerpo: => A): Double = {
   }
   muestras.sorted.apply(muestras.length / 2)
 }
-
-def desviacion(ts: List[Double]): Double = {
-  val media = ts.sum / ts.size
-  math.sqrt(ts.map(t => (t - media) * (t - media)).sum / ts.size)
-}
 ```
 
-La dependencia ya viene en `app/build.gradle` del repositorio:
+Para calcular la aceleración se divide el tiempo de ejecución secuencial entre el tiempo de ejecución paralelo:
 
-```groovy
+```scala
+def aceleracion(tSecuencial: Double, tParalelo: Double): Double =
+  tSecuencial / tParalelo
+```
+
+En notación matemática:
+
+```math
+S=\frac{T_{secuencial}}{T_{paralelo}}
+```
+
+La dependencia ya viene incluida en `app/build.gradle` del repositorio:
+
+```gradle
 implementation 'com.storm-enroute:scalameter-core_2.13:0.21'
 ```
 
-Las dos versiones recorren el arreglo con la misma función, así que la
-diferencia de tiempos es la del reparto. La medición con el umbral igual al
-tamaño del arreglo sirve de control: ahí `segmentRecPar` no parte nada y su
-tiempo tiene que ser el de `segmentRecSec`.
+Las dos versiones actualizan las partículas mediante la misma función de movimiento. La diferencia entre sus tiempos corresponde a la estrategia de reparto y al costo de combinar los resultados parciales.
 
-La máquina tiene 16 núcleos. Los arreglos llevan enteros entre 1 y 100, la
-potencia que se suma es 2 y los tiempos están en milisegundos.
+La medición con el umbral igual al tamaño del sistema sirve como control, debido a que `pasoParalelo` no realiza ninguna división y ejecuta directamente `pasoSegmento`, por lo que se espera un tiempo similar al de `pasoSecuencial`.
+
+La máquina utilizada dispone de 12 procesadores lógicos. Las pruebas se realizan con sistemas de 1.000.000 y 1.500.000 partículas, utilizando un intervalo de tiempo de 0.5 y cuatro umbrales diferentes para cada tamaño del sistema.
+
+Las partículas se generan mediante `Array.tabulate`, con posiciones y velocidades determinadas por su índice y masas entre 1 y 3.
+
+Todos los tiempos obtenidos se expresan en milisegundos.
 
 ## Las mediciones
 
-Con el umbral fijo en 1024, según el tamaño del arreglo:
+## Las mediciones
 
-| n | Secuencial | Desv. | Paralela | Desv. | Aceleración |
-|---:|---:|---:|---:|---:|---:|
-| 100 000 | 0,5 | 0,3 | 0,4 | 0,1 | 1,43 |
-| 1 000 000 | 2,4 | 0,1 | 1,0 | 0,1 | 2,30 |
-| 5 000 000 | 12,2 | 0,2 | 2,4 | 0,1 | 5,11 |
-| 20 000 000 | 48,7 | 1,0 | 8,3 | 0,3 | 5,84 |
+Las pruebas se realizaron en una máquina con 12 procesadores lógicos, utilizando dos tamaños del sistema y diferentes umbrales de paralelización. Los tiempos están expresados en milisegundos.
 
-Con el arreglo fijo en 5 000 000 de elementos, según el umbral. La última
-columna es la aceleración que predice la estimación de trabajo y profundidad,
-calculada como el trabajo total dividido entre el tiempo estimado para 16
-núcleos:
+Con el sistema fijo en 1.000.000 de partículas, según el umbral:
 
-| Umbral | Particiones | Paralela | Desv. | Aceleración | Aceleración estimada |
-|---:|---:|---:|---:|---:|---:|
-| 5 000 000 | 0 | 12,4 | 0,2 | 0,98 | 0,94 |
-| 1 250 000 | 2 | 3,3 | 0,1 | 3,73 | 3,20 |
-| 312 500 | 4 | 2,2 | 0,1 | 5,54 | 8,00 |
-| 78 125 | 6 | 1,9 | 0,1 | **6,45** | 12,80 |
-| 19 531 | 9 | 2,1 | 0,1 | 5,76 | 15,51 |
-| 4 883 | 10 | 2,2 | 0,1 | 5,46 | 15,75 |
-| 1 024 | 13 | 2,2 | 0,0 | 5,45 | 15,97 |
-| 256 | 15 | 2,2 | 1,0 | 5,56 | 15,99 |
+| **Umbral** | **Niveles de división** | **Secuencial (ms)** | **Paralela (ms)** | **Aceleración** |
+| ---------- | ----------------------- | ------------------- | ----------------- | --------------- |
+| 1 000 000  | 0                       | 25,9797             | 27,0795           | 0,959           |
+| 125 000    | 3                       | 25,9797             | 16,4118           | 1,583           |
+| 15 625     | 6                       | 25,9797             | 14,8497           | **1,750**       |
+| 976        | 11                      | 25,9797             | 15,6280           | 1,662           |
 
-El tiempo secuencial de referencia de esta segunda tabla es 12,2 ms, con
-desviación 0,1.
+El tiempo secuencial de referencia de esta primera tabla es de 25,9797 ms.
 
-Las dos tablas salen de corridas distintas, y por eso la fila de 5 000 000 con
-umbral 1024 da 2,4 ms en la primera y 2,2 ms en la segunda. Esas dos décimas
-son el ruido de la medida, y hay que tenerlas presentes al comparar dos filas
-parecidas.
+Con el sistema fijo en 1.500.000 de partículas, según el umbral:
+
+| **Umbral** | **Niveles de división** | **Secuencial (ms)** | **Paralela (ms)** | **Aceleración** |
+| ---------- | ----------------------- | ------------------- | ----------------- | --------------- |
+| 1 500 000  | 0                       | 35,5215             | 86,8666           | **0,409**       |
+| 187 500    | 3                       | 35,5215             | 121,7970          | 0,292           |
+| 23 437     | 7                       | 35,5215             | 99,7153           | 0,356           |
+| 1 464      | 11                      | 35,5215             | 110,5460          | 0,321           |
+
+El tiempo secuencial de referencia de esta segunda tabla es de 35,5215 ms.
+
+En la primera tabla, el mejor resultado se obtiene con un umbral de 15.625 partículas, alcanzando una aceleración de 1,75 y una reducción del tiempo de ejecución de aproximadamente el 42,84 %.
+
+En la segunda tabla, ninguna configuración logra superar el rendimiento de la versión secuencial. Incluso la medición de control, donde el umbral es igual al tamaño del sistema, presenta una diferencia considerable.
+
+Este comportamiento podría estar relacionado con la gestión de memoria, la recolección de basura de la máquina virtual o las condiciones de ejecución del equipo. Sin embargo, se necesitan mediciones adicionales para determinar la causa exacta.
+
+
 
 ## Lo que dicen los números
 
-El control responde lo que debía: con umbral 5 000 000 la aceleración es 0,98,
-el mismo tiempo de la versión secuencial. Una cifra bastante mayor que 1 en esa
-fila diría que las dos versiones no están haciendo el mismo trabajo y que la
-comparación no mide el reparto.
+El control para el sistema de 1 000 000 de partículas responde aproximadamente como se esperaba: con un umbral de 1 000 000, la aceleración es de 0,959, obteniendo un tiempo similar al de la versión secuencial.
 
-Repartir paga cuando hay con qué pagarlo. Con 100 000 elementos la aceleración
-apenas llega a 1,43 y el arreglo entero se recorre en medio milisegundo: crear
-los llamados cuesta casi tanto como el cálculo. A 5 000 000 la aceleración sube
-a 5,11, y a 20 000 000 a 5,84.
+Sin embargo, para el sistema de 1 500 000 de partículas, la medición de control presenta una aceleración de 0,409. Esta diferencia indica que pudieron intervenir factores externos a la estrategia de paralelización, como la gestión de memoria o la recolección de basura de la máquina virtual.
 
-El umbral que más conviene no es el más pequeño. El mejor tiempo está en
-78 125, que son seis particiones y 64 tramos para 16 núcleos. De 19 531 hacia
-abajo la aceleración baja a 5,5 y se queda ahí: cada partición agrega dos
-llamados que hay que repartir, y por debajo de cierto tamaño ese costo ya no se
-recupera con el tramo que se ahorra.
+Para el sistema de 1 000 000 de partículas, la paralelización mejora el rendimiento cuando se utiliza un umbral adecuado. Con un umbral de 125 000, la aceleración alcanza 1,583, mientras que con un umbral de 15 625 aumenta hasta 1,750.
 
-La estimación del punto 4 y la medición coinciden donde no se parte nada y se
-separan en cuanto se parte. En la fila de control las dos dan 1. De ahí en
-adelante la estimación crece hasta 15,99 mientras la medición se queda en 6,45.
-La estimación cuenta operaciones y supone que los 16 núcleos están siempre
-ocupados y que crear un llamado no cuesta nada; el reloj incluye el costo de
-repartir, el acceso a una memoria que comparten todos los núcleos y lo que la
-máquina esté haciendo al lado. Sirve como techo y para comparar umbrales entre
-sí, no como pronóstico del reloj.
+El umbral que más conviene no es necesariamente el más pequeño. El mejor tiempo se obtiene con un umbral de 15 625, correspondiente a seis niveles de división y 64 tramos para 12 procesadores lógicos. Al reducir el umbral hasta 976, la aceleración disminuye a 1,662, posiblemente debido al costo adicional de crear tareas y concatenar los resultados parciales.
 
-Con la aceleración medida de 6,45 sobre 16 núcleos, la ley de Amdahl da la
-fracción del cálculo que corre en serie, con p el número de núcleos:
+Para el sistema de 1 500 000 de partículas, ninguna de las configuraciones paralelas supera el rendimiento de la versión secuencial. Esto demuestra que aumentar el tamaño del sistema no garantiza una mejora en el rendimiento paralelo.
+
+La estimación teórica de trabajo y profundidad permite estudiar el comportamiento del algoritmo en condiciones idealizadas. Sin embargo, los tiempos reales también incluyen el costo de crear tareas, concatenar arreglos, reservar memoria y acceder a los recursos compartidos del equipo. No se dispone de valores numéricos de aceleración estimada para realizar una comparación directa.
+
+Con la mejor aceleración medida de 1,7495 sobre 12 procesadores lógicos, la ley de Amdahl permite estimar la fracción serial efectiva del cálculo, donde p representa el número de procesadores:
 
 ```math
-S(p) = \frac{1}{f + \frac{1 - f}{p}}
-\qquad\Longrightarrow\qquad
-f = \frac{\frac{1}{S} - \frac{1}{p}}{1 - \frac{1}{p}} = 0{,}099
+S(p)=\frac{1}{f+\frac{1-f}{p}}
 ```
 
-Un décimo del cálculo corre en serie, y con ese décimo el techo es 10 por
-muchos núcleos que se agreguen:
+Despejando la fracción serial:
 
-| p | 2 | 4 | 8 | 16 | 32 | ∞ |
-|---|---:|---:|---:|---:|---:|---:|
-| Aceleración máxima | 1,82 | 3,09 | 4,73 | 6,45 | 7,88 | 10,1 |
+```math
+f=\frac{\frac{1}{S}-\frac{1}{p}}{1-\frac{1}{p}}
+```
 
-Pasar de 16 a 32 núcleos agregaría 1,4 a la aceleración, menos de lo que se
-ganó entre 4 y 8. En este cálculo esa décima parte está en partir el arreglo y
-combinar los resultados, y en el acceso a una memoria que comparten los
-dieciséis núcleos.
+Sustituyendo los valores obtenidos:
+
+```math
+f=\frac{\frac{1}{1.7495}-\frac{1}{12}}{1-\frac{1}{12}}\approx 0.533
+```
+
+La fracción serial efectiva corresponde aproximadamente al 53,3 % del cálculo, mientras que el 46,7 % restante representa la fracción paralelizable según este modelo.
+
+La aceleración máxima teórica, manteniendo constante esta fracción, es:
+
+```math
+S_{\max}=\frac{1}{f}\approx 1.88
+```
+
+| p | 2 | 4 | 8 | 12 | 16 | 32 | ∞ |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Aceleración máxima estimada | 1,30 | 1,54 | 1,69 | 1,75 | 1,78 | 1,83 | 1,88 |
+
+Pasar de 12 a 32 procesadores aumentaría la aceleración estimada de 1,75 a 1,83, lo que representa una mejora pequeña según el modelo de Amdahl.
+
+En conclusión, la paralelización permite mejorar el rendimiento de la simulación cuando se selecciona un umbral adecuado. Sin embargo, los costos asociados a la división del sistema, la creación de tareas, la concatenación de arreglos y la gestión de memoria pueden limitar sus beneficios. Por esta razón, es necesario realizar pruebas experimentales para determinar la configuración más conveniente.

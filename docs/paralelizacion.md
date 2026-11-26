@@ -7,7 +7,7 @@ Se explica cómo se divide el trabajo para calcular el movimiento, la energía c
 También se describen las versiones secuenciales usadas como referencia, el modelo teórico de costo y las mediciones 
 realizadas con distintos tamaños de sistemas y umbrales
 
-## Indice
+## Índice
 
 | Punto                             | Funciones del proyecto                                     | Papel en este informe                                                               |
 |-----------------------------------|------------------------------------------------------------|-------------------------------------------------------------------------------------|
@@ -308,7 +308,7 @@ Con 1.000.000 y 4.000.000 de partículas el umbral elegido es `n/8`; con 2.000.0
 
 `umbralConveniente` compara los tiempos de `pasoParalelo` entre sí, no la aceleración. Por eso con 2.000.000 de partículas elige `n/64`, aunque la mayor aceleración de la tabla está en `n/8` (2,79): el secuencial se mide aparte en cada fila y esas diferencias caen dentro de la variación entre corridas. Además, la elección puede cambiar de una ejecución a otra, porque mide cada candidato una sola vez.
 
-# 4 Resultados experimentales
+# 4. Resultados experimentales
 
 Los resultados presentados en las siguientes tablas corresponden a tres ejecuciones completas del experimento. 
 Para cada configuración se reporta la mediana de los tiempos secuenciales, los tiempos paralelos y las aceleraciones 
@@ -420,7 +420,7 @@ El tiempo paralelo disminuyó de 10,97 ms a 4,62 ms al pasar de 1 a 8 procesador
 La aceleración medida fue inferior a la estimada con 4, 8 y 10 procesadores. Esta prueba muestra cómo cambia el
 rendimiento, aunque se basa en una sola ejecución por configuración
 
-# 5 Análisis y discusión
+# 5. Análisis y discusión
 
 ## 5.1 Efecto del umbral
 
@@ -442,6 +442,10 @@ Por ejemplo, con un millón de partículas y umbral 125.000, el movimiento consi
 frente a una estimada de 4,44. Para cuatro millones con umbral 500.000, se midió una aceleración de 3,06 frente 
 a 4,44 estimados. Por eso, el modelo permite comparar tendencias, pero no debe interpretarse como una predicción exacta 
 del tiempo real  
+
+En qué se parecen: en las dos, con umbral igual a `n` no hay ganancia (estimada 0,91 y medida 1,00). Al bajar el umbral a `n/2` y a `n/8`, la aceleración sube en ambas (estimada 1,67 y 4,44; medida 1,78 y 2,83).
+
+En qué se diferencian: con umbrales todavía más pequeños, `n/64` y `n/512`, la estimación sigue subiendo (8,65 y 9,81), pero la medición baja (2,66 y 2,55). El modelo no cuenta lo que cuesta crear y combinar tantas tareas pequeñas, y la máquina real sí lo paga.
 
 ## 5.3 Variación de los tiempos y límites del experimento
 
@@ -504,7 +508,7 @@ Los resultados muestran que aumentar los procesadores no garantiza una aceleraci
 costos de creación de tareas, combinación de resultados y uso de la memoria. Las estimaciones basadas en la ley de 
 Amdahl son aproximadas y no representan límites definitivos del programa
 
-# 6 Conclusión 
+# 6. Conclusión 
 
 La simulación se paralelizó dividiendo las partículas en segmentos independientes y conservando los cálculos de 
 movimiento, energía cinética y centro de masa
@@ -514,4 +518,4 @@ energía y 3,54 en centro de masa. Los resultados demostraron que el umbral infl
 más el trabajo no siempre mejora la velocidad
 
 Finalmente, las aceleraciones medidas fueron generalmente inferiores a las estimadas, debido a los costos adicionales 
-de la ejecución paralela y las condiciones del equipo
+de la ejecución paralela y las condiciones del equipo.

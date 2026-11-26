@@ -64,6 +64,74 @@ flowchart TD
     F --> G["Dividir componentes entre masaTotal"]
     G --> H["Vector2(x_cm, y_cm)"]
 ```
+# Punto 3: las mismas magnitudes en paralelo
+
+## 1. `energiaParalela`
+
+La función recibe el sistema de partículas y un umbral. Primero establece un umbral mínimo de 1 para garantizar que la recursión avance.
+
+La función auxiliar `energia(desde, hasta)` trabaja sobre un segmento del arreglo:
+
+1. Si la cantidad de partículas del segmento es menor o igual al umbral, recorre sus índices y calcula la energía cinética de cada partícula. Luego suma esos valores.
+2. Si el segmento supera el umbral, calcula el índice medio y divide el segmento en dos partes: `[desde, mitad)` y `[mitad, hasta)`.
+3. Las dos llamadas recursivas se ejecutan mediante `parallel`.
+4. Cuando ambas terminan, sus energías parciales se combinan mediante una suma.
+
+Finalmente, se llama a la función auxiliar con el segmento completo, desde `0` hasta `s.length`.
+
+### Ejemplo de ejecución
+
+Considérese un sistema de ocho partículas y un umbral igual a dos.
+
+```mermaid
+graph TD
+    A["energia(0, 8)"] -->|parallel| B["energia(0, 4)"]
+    A -->|parallel| C["energia(4, 8)"]
+    B -->|parallel| D["energia(0, 2)"]
+    B -->|parallel| E["energia(2, 4)"]
+    C -->|parallel| F["energia(4, 6)"]
+    C -->|parallel| G["energia(6, 8)"]
+    D --> H["Cálculo secuencial"]
+    E --> I["Cálculo secuencial"]
+    F --> J["Cálculo secuencial"]
+    G --> K["Cálculo secuencial"]
+```
+
+Cada hoja calcula la energía de su segmento. Los resultados suben por el árbol y se suman hasta obtener la energía total.
+
+## 2. `centroDeMasaParalelo`
+
+Esta función utiliza una estrategia similar de división por mitades, pero cada segmento devuelve una pareja:
+
+- Un `Vector2` con la suma de las posiciones ponderadas por sus masas.
+- Un `Double` con la masa total del segmento.
+
+En el caso base, `foldLeft` recorre el segmento y acumula ambos valores. Cuando el segmento supera el umbral, se divide en dos y las llamadas se ejecutan con `parallel`.
+
+Al terminar, se combinan las parejas sumando sus vectores ponderados y sus masas. Después de obtener el resultado del sistema completo, se divide una sola vez la suma ponderada entre la masa total. Si la masa total es cero, se devuelve el origen `Vector2(0, 0)`.
+
+### Ejemplo de combinación
+
+Supóngase que las dos mitades producen:
+
+```text
+Mitad izquierda: (Vector2(6, 2), 3)
+Mitad derecha:   (Vector2(8, 4), 5)
+```
+
+La combinación produce:
+
+```text
+(Vector2(14, 6), 8)
+```
+
+Y el centro de masa final es:
+
+```text
+Vector2(14 / 8, 6 / 8)
+```
+
+No se promedian los centros de las dos mitades, porque sus masas pueden ser diferentes.
 
 ## Punto 4: Trabajo y profundidad
 

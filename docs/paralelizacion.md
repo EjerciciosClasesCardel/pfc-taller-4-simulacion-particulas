@@ -1,4 +1,5 @@
 
+
 # Simulación de partículas repartida con `parallel`
 
 ## El cálculo
@@ -14,6 +15,7 @@ def pasoSegmento(s: Sistema, dt: Double, desde: Int, hasta: Int): Sistema =
 ```
 
 En notación matemática, la posición de cada partícula después de un intervalo de tiempo se calcula mediante:
+
 ```math
 \vec{r}_i(t+\Delta t)=\vec{r}_i(t)+\vec{v}_i\Delta t
 ```
@@ -41,11 +43,10 @@ def pasoParalelo(s: Sistema, dt: Double, umbral: Int): Sistema = {
   avanzar(0, s.length)
 }
 ```
+
 La diferencia entre ambas versiones es la estrategia de ejecución. Mientras que `pasoSecuencial` procesa todas las partículas de manera consecutiva, `pasoParalelo` distribuye el trabajo mediante `parallel` y posteriormente concatena los resultados parciales utilizando el operador `++`.
 
 Ambas versiones producen un sistema con las mismas partículas actualizadas y conservan su orden original.
-
-## La estrategia de reparto
 
 
 ## La estrategia de reparto
@@ -81,7 +82,6 @@ graph TD
     C --> F["4 a 6: pasoSegmento"]
     C --> G["6 a 8: pasoSegmento"]
 ```
-
 
 ## Cómo se tomaron los tiempos
 
@@ -129,7 +129,6 @@ Las partículas se generan mediante `Array.tabulate`, con posiciones y velocidad
 
 Todos los tiempos obtenidos se expresan en milisegundos.
 
-## Las mediciones
 
 ## Las mediciones
 
@@ -162,7 +161,6 @@ En la primera tabla, el mejor resultado se obtiene con un umbral de 15.625 part�
 En la segunda tabla, ninguna configuración logra superar el rendimiento de la versión secuencial. Incluso la medición de control, donde el umbral es igual al tamaño del sistema, presenta una diferencia considerable.
 
 Este comportamiento podría estar relacionado con la gestión de memoria, la recolección de basura de la máquina virtual o las condiciones de ejecución del equipo. Sin embargo, se necesitan mediciones adicionales para determinar la causa exacta.
-
 
 
 ## Lo que dicen los números

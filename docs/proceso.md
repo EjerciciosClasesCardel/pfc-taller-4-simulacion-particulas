@@ -240,8 +240,167 @@ Resultado ejecutado: `Vector2(0.75, 1.3333333333333333)`, que es (9.0 / 12.0, 16
 Con el sistema vacío, o con todas las masas en cero, el estado final tiene `masa = 0.0` y
 se devuelve el origen sin dividir 0 entre 0.
 
-## 3. Puntos 3, 4 y 5
+## 3. Punto 3: las magnitudes en paralelo
 
-> **Pendiente, a cargo de los demás integrantes del grupo:** `energiaParalela`, `centroDeMasaParalelo`
-> (punto 3), `trabajo`, `profundidad`, `tiempoEstimado` (punto 4) y `aceleracion`, `umbralConveniente` (punto 5).
-> Su traza y su diagrama van en esta sección, con el mismo formato.
+Las dos funciones siguen el mismo árbol de `pasoParalelo` de la sección 1.4: mismo criterio de hoja
+(`hasta - desde <= umbral || hasta - desde <= 1`), mismo punto de partición `m = desde + (hasta - desde) / 2`,
+mismo `parallel` con la espera de la mitad derecha al final. Lo que cambia es lo que devuelve cada llamado y
+con qué se combinan los resultados parciales.
+
+### 3.1 `energiaParalela`
+
+```Scala
+def energiaParalela(s: Sistema, umbral: Int): Double = {
+  // Hoja: el mismo recorrido de cola de energiaSecuencial, con el
+  // acumulador acc, pero detenido en el tramo [desde, hasta).
+  @tailrec
+  def hoja(i: Int, hasta: Int, acc: Double): Double =
+    if (i >= hasta) acc
+    else {
+      val v = s(i).vel.norma
+      hoja(i + 1, hasta, acc + 0.5 * s(i).masa * v * v)
+    }
+
+  // Mismo árbol de pasoParalelo: mismo criterio de hoja, misma mitad.
+  // Lo que combina los parciales es la suma, que es asociativa.
+  def aux(desde: Int, hasta: Int): Double =
+    if (hasta - desde <= umbral || hasta - desde <= 1)
+      hoja(desde, hasta, 0.0)
+    else {
+      val m = desde + (hasta - desde) / 2
+      val (e1, e2) = parallel(aux(desde, m), aux(m, hasta))
+      e1 + e2
+    }
+
+  aux(0, s.length)
+}
+```
+
+Cada llamada devuelve un número. La hoja es el recorrido de cola de `energiaSecuencial` (sección 2.1) con el
+mismo acumulador `acc`, detenido en el tramo; el nodo interior suma las dos mitades. La suma es asociativa, y
+ese es el permiso para repartir: el orden en que lleguen los parciales no cambia el resultado.
+
+**Traza real de `energiaParalela(e5, 2)`.** Mismo árbol que `pasoParalelo(e5, 2.0, 2)` de la sección 1.4:
+
+| llamado | tramo | tamaño | decisión | resultado |
+|---|---|---:|---|---:|
+| 1 | `[0,5)` | 5 | 5 > 2: parte con m = 2 | se arma al sumar los dos hijos |
+| 2 | `[0,2)` | 2 | hoja | 5.500000000000001 |
+| 3 | `[2,5)` | 3 | 3 > 2: parte con m = 3 | se arma al sumar los dos hijos |
+| 4 | `[2,3)` | 1 | hoja | 0.7500000000000001 |
+| 5 | `[3,5)` | 2 | hoja | 17.000000000000004 |
+
+La combinación sube igual que en el punto 1: `[2,5) = 0.7500000000000001 + 17.000000000000004 =
+17.750000000000004`, y `[0,5) = 5.500000000000001 + 17.750000000000004 = 23.250000000000004`. Resultado
+ejecutado: **23.250000000000004**, la misma cifra de `energiaSecuencial` (sección 2.1): el árbol agrupa las
+mismas sumas de otra manera y, en este sistema, el redondeo coincidió bit a bit. En general la igualdad se
+garantiza **hasta el redondeo** de la suma en `Double`, y por eso las pruebas comparan con tolerancia (ver el
+informe de corrección, sección 6.1).
+
+```mermaid
+graph TD
+    A["[0,5): parallel, m = 2"] --> B["[0,2): hoja, 5.500000000000001"]
+    A --> C["[2,5): parallel, m = 3"]
+    C --> D["[2,3): hoja, 0.7500000000000001"]
+    C --> E["[3,5): hoja, 17.000000000000004"]
+```
+
+### 3.2 `centroDeMasaParalelo`
+
+```Scala
+def centroDeMasaParalelo(s: Sistema, umbral: Int): Vector2 = {
+  // Hoja: el mismo recorrido de dos acumuladores de centroDeMasaSecuencial,
+  // sobre el tramo. Cada llamada devuelve la pareja (ponderada, masa) del
+  // tramo, que es lo que se puede combinar sumando; el promedio no.
+  @tailrec
+  def hoja(i: Int, hasta: Int, ponderada: Vector2, masa: Double): (Vector2, Double) =
+    if (i >= hasta) (ponderada, masa)
+    else hoja(i + 1, hasta, ponderada + s(i).pos * s(i).masa, masa + s(i).masa)
+
+  def aux(desde: Int, hasta: Int): (Vector2, Double) =
+    if (hasta - desde <= umbral || hasta - desde <= 1)
+      hoja(desde, hasta, Vector2(0, 0), 0.0)
+    else {
+      val m = desde + (hasta - desde) / 2
+      val ((pi, mi), (pd, md)) = parallel(aux(desde, m), aux(m, hasta))
+      (pi + pd, mi + md)
+    }
+
+  val (ponderada, masa) = aux(0, s.length)
+  if (masa == 0.0) Vector2(0, 0)
+  else Vector2(ponderada.x / masa, ponderada.y / masa)
+}
+```
+
+Lo que viaja por el árbol **no es el promedio**: cada llamada devuelve la **pareja de sumas** del tramo,
+(ponderada, masa) — los mismos dos acumuladores de `centroDeMasaSecuencial` (sección 2.3), pero sin dividir —,
+la combinación suma componente a componente, y la división única al final es la misma de la secuencial. Por
+qué la suma sí se puede combinar y el promedio no, está argumentado en el informe de corrección (sección
+6.2); aquí, los números.
+
+**Traza real de `centroDeMasaParalelo(e5, 2)`:**
+
+| llamado | tramo | decisión | pareja devuelta (ponderada, masa) |
+|---|---|---|---|
+| 1 | `[0,5)` | parte con m = 2 | `((9.0, 16.0), 12.0)` |
+| 2 | `[0,2)` | hoja | `((2.0, 2.0), 3.0)` |
+| 3 | `[2,5)` | parte con m = 3 | `((7.0, 14.0), 9.0)` |
+| 4 | `[2,3)` | hoja | `((15.0, −6.0), 3.0)` |
+| 5 | `[3,5)` | hoja | `((−8.0, 20.0), 6.0)` |
+
+La combinación: `[2,5) = ((15.0, −6.0), 3.0) ⊕ ((−8.0, 20.0), 6.0) = ((7.0, 14.0), 9.0)` y `[0,5) =
+((2.0, 2.0), 3.0) ⊕ ((7.0, 14.0), 9.0) = ((9.0, 16.0), 12.0)`. Resultado ejecutado:
+**Vector2(0.75, 1.3333333333333333)**, exactamente lo que da `centroDeMasaSecuencial` (sección 2.3).
+
+**La trampa, con estos números.** Las mitades `[0,2)` y `[2,5)` no pesan igual: masas 3 y 9. Si cada mitad
+devolviera su promedio, tendrían centros (0.6666666666666666, 0.6666666666666666) y
+(0.7777777777777778, 1.5555555555555556), y el promedio de los dos promedios daría
+(0.7222222222222222, 1.1111111111111112), que no es el centro de nada. El correcto, el de la versión de
+sumas, es (0.75, 1.3333333333333333). La prueba
+`centroDeMasaParalelo: con mitades de masas 3 y 9, la suma da el centro y el promedio de promedios no`
+ejecuta este caso exacto.
+
+```mermaid
+graph TD
+    A["[0,5): ((9.0, 16.0), 12.0)"] --> B["[0,2): ((2.0, 2.0), 3.0)"]
+    A --> C["[2,5): ((7.0, 14.0), 9.0)"]
+    C --> D["[2,3): ((15.0, −6.0), 3.0)"]
+    C --> E["[3,5): ((−8.0, 20.0), 6.0)"]
+```
+
+## 4. Punto 4: trabajo, profundidad y tiempo estimado
+
+```Scala
+def trabajo(n: Int): Int = n
+
+def profundidad(n: Int, umbral: Int): Int =
+  if (n <= umbral || n <= 1) n
+  else 1 + profundidad(n - n / 2, umbral)
+
+def tiempoEstimado(n: Int, p: Int, umbral: Int): Double =
+  profundidad(n, umbral) + trabajo(n).toDouble / p
+```
+
+`trabajo` es la identidad: una operación por partícula, que repartir no reduce. `profundidad` cuenta las
+particiones del **camino más largo** del árbol de `pasoParalelo`, más el tramo que queda sin partir: la mitad
+que se sigue partiendo es la mayor, `n - n/2`, porque es la que fija ese camino, y el tope `n <= 1` es el
+mismo criterio de la guarda de `pasoParalelo`, por eso con umbral 0 tampoco se queda sin fondo.
+
+**Traza real de `profundidad(1024, 512)`:**
+
+| llamado | `n` | decisión |
+|---:|---:|---|
+| 1 | 1024 | 1024 > 512: una partición; se sigue con la mitad mayor, 512 |
+| 2 | 512 | 512 <= 512: **caso base**, devuelve el tramo de 512 |
+
+Resultado: `1 + 512 = 513`.
+
+**Traza real de `profundidad(5, 2)`:** 5 > 2 → `1 + profundidad(3, 2)`; 3 > 2 → `1 + profundidad(2, 2)`;
+`2 <= 2` → `2`. Total `1 + 1 + 2 = 4`. Coincide con el árbol de `pasoParalelo(e5, 2.0, 2)` de la sección 1.4,
+que se ejecutó con 3 hojas y 2 particiones: el camino más largo cruza dos particiones y termina en una hoja
+de tamaño 2, y `2 + 2 = 4`.
+
+**Traza real de `tiempoEstimado(1024, 4, 1)`:** `profundidad(1024, 1) = 11` (diez particiones y un elemento;
+es el mismo árbol que `pasoParalelo(e5, 2.0, 1)` de la sección 1.4 pero con 1024 partículas) y
+`trabajo(1024) / 4 = 256.0`. Resultado ejecutado: **267.0**. El uso de esta estimación contra los tiempos
+medidos está en el informe de paralelización.

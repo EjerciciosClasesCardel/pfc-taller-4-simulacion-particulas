@@ -466,3 +466,93 @@ Los puntos que el enunciado pide en concreto quedan así:
   6.1: la igualdad entre versiones vale hasta el redondeo, y las pruebas comparan con tolerancia.
 - **Punto 4** (sección 7): `trabajo`, `profundidad` y `tiempoEstimado` contra sus definiciones, con la
   correspondencia entre la profundidad y el camino más largo del árbol real de `pasoParalelo`.
+- **Punto 5** (sección 9): `aceleracion` como cociente de tiempos, `umbralConveniente` devuelve un candidato
+  que minimiza el tiempo medido, el resultado no depende del umbral y la fila de control ejecuta la misma
+  llamada que `pasoSecuencial`.
+
+## 9. Corrección del punto 5
+
+**Especificación.** Sea $T_s$ el tiempo medido de `pasoSecuencial` y $T_p(u)$ el de `pasoParalelo` con umbral $u$. Se pide:
+
+$$
+\mathrm{aceleracion}(T_s, T_p) = \frac{T_s}{T_p}, \qquad
+\mathrm{umbralConveniente}(s, dt, U) =
+\begin{cases}
+n & \text{si } U = [\,] \\
+\arg\min_{u \in U} \; T_p(u) & \text{si } U \ne [\,]
+\end{cases}
+$$
+
+con $n$ el tamaño del sistema y $U$ la lista de candidatos.
+
+### 9.1 `aceleracion`
+
+```Scala
+def aceleracion(tSecuencial: Double, tParalelo: Double): Double =
+  tSecuencial / tParalelo
+```
+
+Es la definición del enunciado, sin ningún caso adicional. Con $T_p > 0$ se cumplen las propiedades que las pruebas verifican:
+
+- $T_s = T_p \Rightarrow S = 1$.
+- $T_p < T_s \Rightarrow S > 1$, y $T_p > T_s \Rightarrow S < 1$.
+- Escalar los dos tiempos por $c > 0$ no cambia el cociente: $\dfrac{c\,T_s}{c\,T_p} = \dfrac{T_s}{T_p}$.
+- $T_s = 0$ con $T_p > 0$ da $0$.
+
+Si $T_p = 0$ la división en `Double` da `Infinity` (con $T_s > 0$) o `NaN` (con $T_s = 0$). Esto no ocurre en la práctica, porque ScalaMeter
+mide tiempos estrictamente positivos sobre un millón de partículas, así que no se agrega una rama para ese caso.
+
+### 9.2 `umbralConveniente`
+
+```Scala
+def umbralConveniente(s: Sistema, dt: Double, umbrales: List[Int]): Int =
+  umbrales match {
+    case Nil => s.length
+    case _ =>
+      val tiempos = umbrales.map(u => (u, medir(3)(pasoParalelo(s, dt, u))))
+      tiempos.minBy(_._2)._1
+  }
+```
+
+Sea $t_u$ el tiempo que `medir` obtiene para el candidato $u$. Se argumenta por casos sobre $U$.
+
+- **$U = [\,]$.** Se devuelve `s.length` $= n$ sin medir. Es lo que el enunciado pide: un umbral igual al tamaño no reparte nada.
+- **$U \ne [\,]$.** `tiempos` es la lista $[(u_1, t_{u_1}), \dots, (u_k, t_{u_k})]$, con un elemento por cada candidato y en el mismo orden, porque `map` conserva el orden y no pierde ni repite elementos.
+  `minBy(_._2)` devuelve un elemento $(u^*, t_{u^*})$ **de esa lista**, tal que $t_{u^*} \le t_{u_j}$ para todo $j$. Por tanto:
+  1. **Pertenencia:** $u^* \in U$. La prueba `devuelve uno de los candidatos` lo verifica.
+  2. **Minimalidad:** $u^*$ minimiza el tiempo medido entre los candidatos. Con un solo candidato la lista tiene un elemento y se devuelve ese mismo.
+  3. **Empates:** `minBy` conserva el primero que alcanza el mínimo, así que el resultado está bien definido.
+- **Terminación.** `map` y `minBy` recorren una lista finita, y cada `medir` ejecuta un número finito de repeticiones.
+
+**Qué se garantiza y qué no.** La minimalidad es sobre los tiempos **medidos**, no sobre los tiempos «verdaderos» de la máquina:
+dos corridas pueden elegir candidatos distintos cuando los tiempos son parecidos. Por eso `medir` toma la mediana de
+varias muestras, que es un elemento de la propia muestra ordenada y es poco sensible a una corrida atípica. Esto es una propiedad
+de la medición y no del algoritmo, y por eso las pruebas no comparan tiempos.
+
+### 9.3 La elección del umbral no cambia el resultado
+
+Lo que mide `umbralConveniente` es `pasoParalelo(s, dt, u)`. Por el teorema de la sección 4, para todo $u$:
+
+$$
+\mathrm{pasoParalelo}(s, dt, u) = T(0, n) = \mathrm{pasoSecuencial}(s, dt)
+$$
+
+Los candidatos solo se diferencian en **cuánto tardan**, no en qué calculan. Por eso elegir uno cualquiera es correcto, y
+elegir el más rápido es una decisión de rendimiento. La prueba
+`el umbral elegido produce el mismo resultado que el secuencial` ejecuta esta afirmación con `sameElements`.
+
+### 9.4 La fila de control
+
+Sea $u \ge n$. En `aux(0, n)` se cumple $n - 0 \le u$, así que es una hoja y la función devuelve
+`pasoSegmento(s, dt, 0, n)`, que es exactamente el cuerpo de `pasoSecuencial`. No se llama a `parallel` ni a `++`.
+Las dos versiones ejecutan la misma llamada, así que la diferencia de tiempos debe ser solo ruido de medición y la
+aceleración debe quedar cerca de 1. Si no es así, la medición está contaminada, por ejemplo por poca memoria o por el
+recolector de basura, y no hay un error de cálculo. La prueba
+`control: con umbral igual al tamaño, pasoParalelo da lo mismo que pasoSecuencial` verifica la igualdad de resultados.
+
+### 9.5 Resumen del punto 5
+
+- `aceleracion` es el cociente de tiempos.
+- `umbralConveniente` devuelve un candidato de la lista que minimiza el tiempo medido, y `n` con la lista vacía.
+- El resultado de `pasoParalelo` no depende del umbral elegido.
+- La fila de control ejecuta la misma llamada que `pasoSecuencial`.

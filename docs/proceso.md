@@ -404,3 +404,91 @@ de tamaño 2, y `2 + 2 = 4`.
 es el mismo árbol que `pasoParalelo(e5, 2.0, 1)` de la sección 1.4 pero con 1024 partículas) y
 `trabajo(1024) / 4 = 256.0`. Resultado ejecutado: **267.0**. El uso de esta estimación contra los tiempos
 medidos está en el informe de paralelización.
+
+
+
+## 5. Punto 5: medir la aceleración
+
+### 5.1 `aceleracion`
+
+```Scala
+def aceleracion(tSecuencial: Double, tParalelo: Double): Double =
+  tSecuencial / tParalelo
+```
+
+Es el cociente entre el tiempo de la versión secuencial y el de la paralela. No usa recursión, porque es una sola operación.
+Si el resultado es mayor que 1, el paralelo ganó; si es 1, tardaron lo mismo; si es menor que 1, el reparto costó más de lo que ahorró.
+
+| llamado | `tSecuencial` | `tParalelo` | resultado |
+|---|---:|---:|---:|
+| `aceleracion(100.0, 25.0)` | 100.0 | 25.0 | 4.0 |
+| `aceleracion(100.0, 100.0)` | 100.0 | 100.0 | 1.0 |
+| `aceleracion(50.0, 100.0)` | 50.0 | 100.0 | 0.5 |
+| `aceleracion(0.0, 10.0)` | 0.0 | 10.0 | 0.0 |
+
+### 5.2 `medir`
+
+```Scala
+def medir[A](repeticiones: Int)(cuerpo: => A): Double = {
+  val muestras = Vector.fill(repeticiones) {
+    (withWarmer(new Warmer.Default) measure { cuerpo }).value
+  }
+  muestras.sorted.apply(muestras.length / 2)
+}
+```
+
+Viene dada con el material. Cada una de las `repeticiones` mediciones de ScalaMeter calienta la máquina virtual y devuelve
+un tiempo en milisegundos. Luego se ordenan las muestras y se toma la del medio, la **mediana**: con 5 muestras es la de
+índice 2 y con 3 es la de índice 1. La mediana se usa porque una corrida atípica, por ejemplo una pausa del recolector de basura, no la mueve.
+
+### 5.3 `umbralConveniente`
+
+```Scala
+def umbralConveniente(s: Sistema, dt: Double, umbrales: List[Int]): Int =
+  umbrales match {
+    case Nil => s.length
+    case _ =>
+      val tiempos = umbrales.map(u => (u, medir(3)(pasoParalelo(s, dt, u))))
+      tiempos.minBy(_._2)._1
+  }
+```
+
+1. Si la lista está vacía devuelve `s.length`, que equivale a no repartir, y **no mide nada**.
+2. Si no, construye una lista de parejas `(umbral, tiempo)`: para cada candidato mide `pasoParalelo(s, dt, u)` con `medir(3)`, es decir, la mediana de 3 mediciones.
+3. `minBy(_._2)` recorre las parejas y se queda con la de menor tiempo. Si dos empatan, queda la primera de la lista.
+4. `._1` toma el umbral de esa pareja y lo devuelve.
+
+Traza con `umbrales = List(16, 128, 1024)`. Los tiempos son **ilustrativos**, no medidos:
+
+| paso | `u` | `medir(3)(pasoParalelo(s, dt, u))` | mínimo hasta ahora |
+|---:|---:|---:|---|
+| 1 | 16 | 9.0 ms | (16, 9.0) |
+| 2 | 128 | 6.5 ms | (128, 6.5) |
+| 3 | 1024 | 7.2 ms | (128, 6.5) |
+
+Resultado: `128`, el candidato con el menor tiempo.
+Con `umbrales = Nil` el resultado es `s.length`, sin ninguna medición.
+
+### 5.4 La medición en `App.scala`
+
+Para cada tamaño `n` de la lista (1 y 2 millones) el programa crea el sistema con `Array.tabulate`. Después, para cada umbral,
+hace 5 rondas que alternan `pasoSecuencial` y `pasoParalelo`, de modo que el ruido de la máquina afecte a los dos por igual.
+Antes de cada medición llama a `System.gc()` y usa `medir(1)`, es decir, ScalaMeter con calentamiento; se reporta la mediana de las rondas.
+Calcula la aceleración con `aceleracion`, la estimación del punto 4, `tiempoEstimado(n, 1, u) / tiempoEstimado(n, nucleos, u)`,
+y la fracción serial con la ley de Amdahl, e imprime la fila.
+El último umbral de cada tamaño es `n`: no reparte nada y es la **fila de control**.
+
+```mermaid
+flowchart TD
+    A["crear(n): sistema de n partículas"] --> B["para cada umbral u de la lista"]
+    B --> C["5 rondas: tSeq y tPar alternados"]
+    C --> D["mediana de tSeq y mediana de tPar"]
+    D --> E["a = aceleracion(tSeq, tPar)"]
+    E --> F["estimada = tiempoEstimado(n,1,u) / tiempoEstimado(n,núcleos,u)"]
+    F --> G["imprime la fila; si u = n, marca control"]
+    G --> B
+```
+
+Traza de la fila de control sobre un sistema pequeño: con `n = 2000` y `u = 2000`, `pasoParalelo`
+entra a `aux(0, 2000)`, cumple `2000 - 0 <= 2000` y ejecuta `pasoSegmento(s, dt, 0, 2000)`. Esa es la misma llamada que hace
+`pasoSecuencial`, y la prueba `control: con umbral igual al tamaño...` comprueba que los dos arreglos son iguales.

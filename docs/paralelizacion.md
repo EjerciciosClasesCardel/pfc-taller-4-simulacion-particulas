@@ -64,7 +64,6 @@ Esto es **análisis**, no una medición, y lo que dice cada punto debe contrasta
 Estos tres puntos son **hipótesis candidatas** para explicar, en la sección 4, por qué la aceleración medida
 quedaría por debajo de la estimada; no se afirma todavía que expliquen nada.
 
-## 3. Tabla de tiempos con la fila de control
 
 ## 3. Tabla de tiempos con la fila de control
 
@@ -107,8 +106,7 @@ para detectar una medición mala.
 
 
 ## 4. Comparación con la estimación del punto 4 y lectura de los resultados
-
-4.1 En qué se parecen y en qué no
+### 4.1 En qué se parecen y en qué no
 
 - **Se parecen en la forma.** Tanto lo estimado como lo medido bajan al subir el umbral: con 1.000 y 10.000 la aceleración
   es la mayor, y con umbrales grandes se reparte en pocas hojas y la ganancia cae. Con el umbral igual a `n` ambas
@@ -130,12 +128,12 @@ real tiene costos que el modelo no incluye. No se midieron por separado, así qu
 
 ### 4.2 Qué umbral resultó conveniente
 
-Con n = 1.000.000, los umbrales **1000 y 10000** dieron la mayor aceleración (1.95 y 1.94), prácticamente empatados.
-Con 100000 bajó a 1.42, y con n/8 el paralelo fue más lento que el secuencial (0.87): hay muy pocas tareas y el costo de
+Con $n = 1.000.000$, los umbrales **1000 y 10000** dieron la mayor aceleración (1.95 y 1.94), prácticamente empatados.
+Con 100000 bajó a 1.42, y con $n/8$ el paralelo fue más lento que el secuencial (0.87): hay muy pocas tareas y el costo de
 repartir y de unir supera lo que ahorra. Un umbral muy pequeño crea demasiadas tareas y uno muy grande deja núcleos
-sin trabajo. Con 1000 a 10000 se logra un punto intermedio, con cientos o miles de hojas por núcleo, lo que equilibra la
-carga sin que el costo de crear tareas domine. Con una sola corrida limpia no se puede decir que uno de los dos sea
-mejor que el otro.
+sin trabajo. Con 1000 y 10000 se logra un punto intermedio, con unas 1000 y 100 hojas respectivamente, es decir, muchas
+más tareas que núcleos, lo que equilibra la carga sin que el costo de crear tareas domine. Con una sola corrida limpia
+no se puede decir que uno de los dos sea mejor que el otro.
 
 ### 4.3 Por qué la aceleración deja de crecer y la fracción serial
 

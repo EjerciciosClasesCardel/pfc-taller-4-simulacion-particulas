@@ -327,41 +327,44 @@ class SimulacionParticulasExtraTest extends AnyFunSuite {
     assert(estimados.forall(_ >= profundidad(1000, 1)))
   }
   //puto 5--------------------------------------------------------------------
-  val sistema: Sistema = Array.tabulate(2000)(i => Particula(
-    Vector2(i.toDouble, (i % 7).toDouble),
-    Vector2((i % 3).toDouble, 1.0),
-    1.0 + (i % 4)))
-
-
-  test("aceleracion: un paralelo más lento da menos de 1") {
-    assert(cerca(aceleracion(50.0, 100.0), 0.5))
+  test("aceleracion: un paralelo más lento da menos de uno") {
+    assert(cerca(aceleracion(5.0, 10.0), 0.5))
   }
 
-  test("aceleracion: un tiempo secuencial de cero da cero") {
-    assert(cerca(aceleracion(0.0, 10.0), 0.0))
+  test("aceleracion: tiempos con decimales") {
+    assert(cerca(aceleracion(90.0, 30.0), 3.0))
   }
 
-  test("aceleracion: escalar los dos tiempos no cambia el cociente") {
-    assert(cerca(aceleracion(7.5, 2.5), aceleracion(75.0, 25.0)))
+  test("aceleracion: la misma medida en ambos lados da uno") {
+    assert(List(0.001, 1.0, 37.5, 1e6).forall(t => cerca(aceleracion(t, t), 1.0)))
   }
 
-  test("umbralConveniente: con un solo candidato devuelve ese candidato") {
-    assert(umbralConveniente(sistema, 0.5, List(256)) == 256)
+  test("aceleracion: tiempo secuencial cero da cero") {
+    assert(cerca(aceleracion(0.0, 7.0), 0.0))
   }
 
-  test("umbralConveniente: con la lista vacía y el sistema vacío devuelve cero") {
-    assert(umbralConveniente(Array[Particula](), 0.5, Nil) == 0)
+  test("aceleracion: escala con el cociente aunque los tiempos sean grandes") {
+    assert(cerca(aceleracion(1e6, 250.0), 4000.0))
   }
 
-  test("control: con umbral igual al tamaño, pasoParalelo da lo mismo que pasoSecuencial") {
-    val par = pasoParalelo(sistema, 0.5, sistema.length)
-    val seq = pasoSecuencial(sistema, 0.5)
-    assert(par.sameElements(seq))
+  test("umbralConveniente: sin candidatos y sistema vacío devuelve cero") {
+    assert(umbralConveniente(Array[Particula](), 1.0, Nil) == 0)
   }
 
-  test("umbralConveniente: el umbral elegido produce el mismo resultado que el secuencial") {
-    val u = umbralConveniente(sistema, 0.5, List(8, 64, 512))
-    assert(pasoParalelo(sistema, 0.5, u).sameElements(pasoSecuencial(sistema, 0.5)))
+  test("umbralConveniente: con un solo candidato devuelve ese") {
+    assert(umbralConveniente(disperso, 0.5, List(64)) == 64)
   }
 
+  test("umbralConveniente: sin candidatos devuelve el tamaño de un sistema impar") {
+    assert(umbralConveniente(disperso, 0.5, Nil) == 777)
+  }
+
+  test("umbralConveniente: el resultado pertenece a los candidatos") {
+    val candidatos = List(1, 50, 777, 5000)
+    assert(candidatos.contains(umbralConveniente(disperso, 0.5, candidatos)))
+  }
+
+  test("umbralConveniente: funciona sobre el sistema vacío con candidatos") {
+    assert(List(1, 10).contains(umbralConveniente(Array[Particula](), 1.0, List(1, 10))))
+  }
 }

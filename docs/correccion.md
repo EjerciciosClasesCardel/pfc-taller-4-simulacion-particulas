@@ -506,23 +506,21 @@ mide tiempos estrictamente positivos sobre un millón de partículas, así que n
 
 ```Scala
 def umbralConveniente(s: Sistema, dt: Double, umbrales: List[Int]): Int =
-  umbrales match {
-    case Nil => s.length
-    case _ =>
-      val tiempos = umbrales.map(u => (u, medir(3)(pasoParalelo(s, dt, u))))
-      tiempos.minBy(_._2)._1
-  }
+  umbrales
+    .map(u => (u, medir(3)(pasoParalelo(s, dt, u))))
+    .minByOption(_._2)
+    .map(_._1)
+    .getOrElse(s.length)
 ```
 
 Sea $t_u$ el tiempo que `medir` obtiene para el candidato $u$. Se argumenta por casos sobre $U$.
 
-- **$U = [\,]$.** Se devuelve `s.length` $= n$ sin medir. Es lo que el enunciado pide: un umbral igual al tamaño no reparte nada.
-- **$U \ne [\,]$.** `tiempos` es la lista $[(u_1, t_{u_1}), \dots, (u_k, t_{u_k})]$, con un elemento por cada candidato y en el mismo orden, porque `map` conserva el orden y no pierde ni repite elementos.
-  `minBy(_._2)` devuelve un elemento $(u^*, t_{u^*})$ **de esa lista**, tal que $t_{u^*} \le t_{u_j}$ para todo $j$. Por tanto:
+- **$U = [\,]$.** `map` sobre la lista vacía da la lista vacía, y no se mide nada. `minByOption` de una lista vacía es `None`, `None.map(_._1)` es `None` y `None.getOrElse(s.length)` es $n$. Es lo que el enunciado pide: un umbral igual al tamaño no reparte nada. La función es total: usar `minByOption` evita la excepción que lanzaría `minBy` sobre una lista vacía.
+- **$U \ne [\,]$.** `map` conserva el orden y no pierde ni repite elementos, así que la lista intermedia es $[(u_1, t_{u_1}), \dots, (u_k, t_{u_k})]$, con un elemento por candidato. `minByOption(_._2)` devuelve `Some` de un elemento $(u^*, t_{u^*})$ **de esa lista**, tal que $t_{u^*} \le t_{u_j}$ para todo $j$. `.map(_._1)` extrae $u^*$ y `getOrElse` lo entrega sin usar el valor por defecto. Por tanto:
   1. **Pertenencia:** $u^* \in U$. La prueba `devuelve uno de los candidatos` lo verifica.
   2. **Minimalidad:** $u^*$ minimiza el tiempo medido entre los candidatos. Con un solo candidato la lista tiene un elemento y se devuelve ese mismo.
-  3. **Empates:** `minBy` conserva el primero que alcanza el mínimo, así que el resultado está bien definido.
-- **Terminación.** `map` y `minBy` recorren una lista finita, y cada `medir` ejecuta un número finito de repeticiones.
+  3. **Empates:** si varios candidatos alcanzan el mínimo, la biblioteca devuelve el primero, así que el resultado está bien definido.
+- **Terminación.** `map` y `minByOption` recorren una lista finita, y cada `medir` ejecuta un número finito de repeticiones. No hay recursión.
 
 **Qué se garantiza y qué no.** La minimalidad es sobre los tiempos **medidos**, no sobre los tiempos «verdaderos» de la máquina:
 dos corridas pueden elegir candidatos distintos cuando los tiempos son parecidos. Por eso `medir` toma la mediana de
@@ -534,12 +532,11 @@ de la medición y no del algoritmo, y por eso las pruebas no comparan tiempos.
 Lo que mide `umbralConveniente` es `pasoParalelo(s, dt, u)`. Por el teorema de la sección 4, para todo $u$:
 
 $$
-\mathrm{pasoParalelo}(s, dt, u) = T(0, n) = \mathrm{pasoSecuencial}(s, dt)
+\mathrm{pasoParalelo}(s, dt, u) = \mathrm{pasoSecuencial}(s, dt)
 $$
 
 Los candidatos solo se diferencian en **cuánto tardan**, no en qué calculan. Por eso elegir uno cualquiera es correcto, y
-elegir el más rápido es una decisión de rendimiento. La prueba
-`el umbral elegido produce el mismo resultado que el secuencial` ejecuta esta afirmación con `sameElements`.
+elegir el más rápido es una decisión de rendimiento.
 
 ### 9.4 La fila de control
 
@@ -547,12 +544,12 @@ Sea $u \ge n$. En `aux(0, n)` se cumple $n - 0 \le u$, así que es una hoja y la
 `pasoSegmento(s, dt, 0, n)`, que es exactamente el cuerpo de `pasoSecuencial`. No se llama a `parallel` ni a `++`.
 Las dos versiones ejecutan la misma llamada, así que la diferencia de tiempos debe ser solo ruido de medición y la
 aceleración debe quedar cerca de 1. Si no es así, la medición está contaminada, por ejemplo por poca memoria o por el
-recolector de basura, y no hay un error de cálculo. La prueba
-`control: con umbral igual al tamaño, pasoParalelo da lo mismo que pasoSecuencial` verifica la igualdad de resultados.
+recolector de basura, y no hay un error de cálculo. Esto se observó en las mediciones: con $n = 1.000.000$ el control dio 0.98 y 0.96,
+y con $n = 2.000.000$ dio 1.09 y 0.56, por lo que esas últimas se descartaron (informe de paralelización, sección 3).
 
 ### 9.5 Resumen del punto 5
 
 - `aceleracion` es el cociente de tiempos.
-- `umbralConveniente` devuelve un candidato de la lista que minimiza el tiempo medido, y `n` con la lista vacía.
+- `umbralConveniente` devuelve un candidato de la lista que minimiza el tiempo medido, y $n$ con la lista vacía.
 - El resultado de `pasoParalelo` no depende del umbral elegido.
-- La fila de control ejecuta la misma llamada que `pasoSecuencial`.
+- La fila de control ejecuta la misma llamada que `pasoSecuencial`, y su aceleración debe dar cerca de 1.

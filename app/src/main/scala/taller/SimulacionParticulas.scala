@@ -182,10 +182,10 @@ class SimulacionParticulas {
    * el tamaño del sistema, que equivale a no repartir.
    */
   def umbralConveniente(s: Sistema, dt: Double, umbrales: List[Int]): Int =
-    umbrales match {
-      case Nil => s.length
-      case _ =>
-        val tiempos = umbrales.map(u => (u, medir(3)(pasoParalelo(s, dt, u))))
-        tiempos.minBy(_._2)._1
-    }
+    umbrales
+      .map(u => (u, medir(3)(pasoParalelo(s, dt, u))))
+      .minByOption(_._2)
+      .map(_._1)
+      .getOrElse(s.length)
+
 }
